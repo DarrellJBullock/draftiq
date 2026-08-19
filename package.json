@@ -13,7 +13,8 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
-    "db:generate": "prisma generate"
+    "db:generate": "prisma generate",
+    "generate:provider-projections": "tsx scripts/generate-provider-projections.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
