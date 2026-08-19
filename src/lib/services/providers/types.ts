@@ -1,4 +1,4 @@
-import type { ScoringFormatPreset } from "@prisma/client";
+import type { InjuryStatus, ScoringFormatPreset } from "@prisma/client";
 
 export interface ProviderPlayerRecord {
   externalId: string;
@@ -11,6 +11,8 @@ export interface ProviderPlayerRecord {
   age: number | null;
   isRookie: boolean;
   isFreeAgent: boolean;
+  /** Omit when the provider doesn't report injury data; sync leaves the existing value untouched. */
+  injuryStatus?: InjuryStatus;
 }
 
 export interface ProviderADPRecord {

@@ -54,6 +54,7 @@ The app is fully usable immediately after seeding -- no sign-up step (see "Auth"
 | `AI_PROVIDER` | `openai` \| `anthropic` \| `fallback` (default) |
 | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` | Only needed if `AI_PROVIDER` is set to that provider. Server-side only, never sent to the browser. |
 | `AI_MODEL` | Optional model override |
+| `DATA_PROVIDER` | `seed` (default) \| `sleeper`. See "Live NFL player data" below. |
 
 ## Database setup & seeding
 
@@ -69,6 +70,10 @@ Seed data is generated (not hand-authored real rosters) because this build's kno
 ## Uploading player/ranking/ADP/projection/team data
 
 Visit `/import`, choose a data type, pick a season year, and upload a CSV or JSON file (templates and examples are in `data/templates/`). "Validate" previews rows and reports errors/warnings without writing anything; "Confirm Import" commits.
+
+## Live NFL player data
+
+The same `/import` page has a **Live Data Sync** panel that pulls real, current player bios/rosters/status directly from a live provider -- no file needed. The default (and only wired-up today) provider is **Sleeper** (`api.sleeper.app`): free, no API key, real names/teams/positions/injury status. It intentionally does not cover ADP, expert rankings, or fantasy projections -- those are proprietary commercial data with no legitimate free source; bring your own via CSV/JSON import, or wire up a paid vendor (SportsData.io, FantasyPros, etc.) behind the same `NFLDataProvider` interface (see `src/lib/services/providers/sleeper-provider.ts` for the pattern, and CLAUDE.md's "How to add a new data provider"). Set `DATA_PROVIDER=sleeper` to also prefer live Sleeper data over the seeded dataset for normal app reads (`getPlayers`); the sync button works regardless of that setting.
 
 ## How the value engine works
 

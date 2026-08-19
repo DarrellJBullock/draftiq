@@ -196,6 +196,8 @@ model Player {
   returningFromInjury Boolean      @default(false)
   injuryStatus        InjuryStatus @default(HEALTHY)
   dataSource          DataSource   @default(SEED)
+  /** Provider record id (e.g. a Sleeper player_id), for reliable re-sync matching. One active provider at a time. */
+  externalId          String?      @unique
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 

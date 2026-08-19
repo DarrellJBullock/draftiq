@@ -39,7 +39,7 @@ tests/unit/                Vitest unit tests for the engines
 - `sleeper-bust` -- sleeper/bust scoring from ADP-vs-rank gaps and risk signals.
 - `trade-engine` -- trade value comparison; `getRestOfSeasonProjection` is the seam for future weekly-projection data.
 - `scoring` -- recomputes fantasy points from raw stats under an arbitrary (including fully custom) league scoring config.
-- `providers` -- `NFLDataProvider` interface + the default `seedDataProvider` (reads whatever is currently in Postgres). This is the extension point for a live data vendor.
+- `providers` -- `NFLDataProvider` interface, the default `seedDataProvider` (reads whatever is currently in Postgres), and `sleeperProvider` (real, free, no-key live NFL rosters from api.sleeper.app -- player bios/status only, no ADP/rankings/projections). `sync.ts` upserts a live provider's `getPlayers()` output into the DB with `dataSource: "PROVIDER"`, triggered from `/import`'s "Live Data Sync" panel or `POST /api/sync/players`.
 - `ai` -- `AIProvider` interface with OpenAI/Anthropic implementations (via the Vercel AI SDK's `generateObject`) and a deterministic, zero-cost fallback used whenever no API key is configured.
 
 `src/lib/queries/*` sits between the engines and the UI: it fetches from Prisma, shapes the result (see `queries/shape.ts`), and often calls an engine to attach computed fields (e.g. `queries/value-pool.ts` attaches `ValueResult` to every player).
@@ -83,10 +83,13 @@ tests/unit/                Vitest unit tests for the engines
 
 ## How to add a new data provider
 
-1. Implement the `NFLDataProvider` interface (`src/lib/services/providers/types.ts`) in a new file, e.g. `providers/acme-provider.ts`.
-2. Return it from `getDataProvider()` in `providers/index.ts`, gated by an env var (e.g. `DATA_PROVIDER=acme`).
-3. Write an import/sync routine that calls the provider and upserts into `Player`/`ADP`/`Projection`/`Ranking` with `dataSource: "PROVIDER"` -- follow the pattern in `src/lib/services/import/importer.ts`, which already does this for CSV/JSON uploads.
-4. Nothing else in the app needs to change -- all reads go through `src/lib/queries/*`, which don't care where the underlying rows came from.
+`sleeper-provider.ts` is a real, working reference implementation (free, no API key, live at api.sleeper.app) -- follow its shape for a new one.
+
+1. Implement the `NFLDataProvider` interface (`src/lib/services/providers/types.ts`) in a new file, e.g. `providers/acme-provider.ts`. Map the vendor's response onto `ProviderPlayerRecord`/`ProviderADPRecord`/etc.; export the mapping function so it's unit-testable against a captured fixture (see `tests/unit/sleeper-provider.test.ts`) without hitting the network in CI.
+2. Register it in the `PROVIDERS` map in `providers/index.ts` (also gate any required API key there, e.g. only register/use it when `ACME_API_KEY` is set).
+3. `syncPlayersFromProvider()` (`providers/sync.ts`) already handles the `getPlayers()` sync path against any registered provider -- it upserts into `Player`/`PlayerSeason` with `dataSource: "PROVIDER"`, matching by `Player.externalId` first (reliable across re-syncs) and falling back to a name+position match. Wire ADP/Projections/Rankings similarly if the new vendor provides them (Sleeper doesn't -- those methods return `[]`).
+4. The `/import` page's "Live Data Sync" panel and `POST /api/sync/players` already call `syncPlayersFromProvider()` by provider name -- a new provider just needs to appear in `AVAILABLE_PROVIDER_NAMES` (automatic once registered in step 2) to show up there.
+5. Nothing else in the app needs to change -- all reads go through `src/lib/queries/*`, which don't care where the underlying rows came from.
 
 ## How to add a new rookie class
 
