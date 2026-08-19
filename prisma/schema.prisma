@@ -331,6 +331,13 @@ model Projection {
   receivingTDs      Float?
   fieldGoalsMade    Float?
   extraPointsMade   Float?
+  // DST-specific categories (all others above are position-agnostic).
+  sacks                   Float?
+  defensiveInterceptions  Float?
+  fumbleRecoveries        Float?
+  defensiveTDs            Float?
+  safeties                Float?
+  pointsAllowedPerGame    Float?
   fantasyPoints     Float?
   floor             Float?
   median            Float?

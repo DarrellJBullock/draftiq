@@ -1,3 +1,4 @@
-firstName,lastName,position,scoringFormat,games,attempts,completions,passingYards,passingTDs,interceptions,rushAttempts,rushingYards,rushingTDs,targets,receptions,receivingYards,receivingTDs,fieldGoalsMade,extraPointsMade,fantasyPoints,floor,median,ceiling
-Marcus,Fielding,QB,PPR,17,560,365,4200,32,10,45,180,2,,,,,,,318.8,250.4,318.8,390.2
-Devin,Marsh,RB,PPR,16,240,,,,,240,1080,9,55,42,340,2,,,275.0,215.0,275.0,335.0
+firstName,lastName,position,scoringFormat,games,attempts,completions,passingYards,passingTDs,interceptions,rushAttempts,rushingYards,rushingTDs,targets,receptions,receivingYards,receivingTDs,fieldGoalsMade,extraPointsMade,sacks,defensiveInterceptions,fumbleRecoveries,defensiveTDs,safeties,pointsAllowedPerGame,fantasyPoints,floor,median,ceiling
+Marcus,Fielding,QB,PPR,17,560,365,4200,32,10,45,180,2,,,,,,,,,,,,,318.8,250.4,318.8,390.2
+Devin,Marsh,RB,PPR,16,240,,,,,240,1080,9,55,42,340,2,,,,,,,,,275.0,215.0,275.0,335.0
+Storm,Defense,DST,PPR,17,,,,,,,,,,,,,,,,44,22,14,3,1,19.5,142.0,110.0,142.0,175.0

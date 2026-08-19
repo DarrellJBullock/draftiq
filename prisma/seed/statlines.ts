@@ -17,6 +17,12 @@ export interface StatLine {
   receivingTDs?: number;
   fieldGoalsMade?: number;
   extraPointsMade?: number;
+  sacks?: number;
+  defensiveInterceptions?: number;
+  fumbleRecoveries?: number;
+  defensiveTDs?: number;
+  safeties?: number;
+  pointsAllowedPerGame?: number;
 }
 
 /** Format-agnostic season statline driven by a 0-1 quality score. */
@@ -66,7 +72,19 @@ export function generateStatLine(rand: () => number, position: Position, quality
       const extraPointsMade = Math.round((22 + quality * 18) * gameFactor);
       return { games, fieldGoalsMade, extraPointsMade };
     }
-    case "DST":
+    case "DST": {
+      // Standard-format defense scoring categories: sacks, takeaways
+      // (interceptions + fumble recoveries), defensive/return TDs, safeties,
+      // plus a points-allowed-per-game figure used by fantasyPointsFor to
+      // apply the usual tiered points-allowed bonus/penalty.
+      const sacks = Math.round((28 + quality * 24) * gameFactor);
+      const defensiveInterceptions = Math.round((6 + quality * 12) * gameFactor);
+      const fumbleRecoveries = Math.round((5 + quality * 8) * gameFactor);
+      const defensiveTDs = Math.round(quality * randFloat(rand, 0, 4));
+      const safeties = rand() > 1 - quality * 0.3 ? 1 : 0;
+      const pointsAllowedPerGame = Math.round((28 - quality * 14) * 10) / 10;
+      return { games, sacks, defensiveInterceptions, fumbleRecoveries, defensiveTDs, safeties, pointsAllowedPerGame };
+    }
     default:
       return { games };
   }
@@ -96,7 +114,26 @@ export function fantasyPointsFor(stat: StatLine, format: ScoringFormatPreset, po
   points += (stat.receptions ?? 0) * receptionPoints;
   points += (stat.fieldGoalsMade ?? 0) * 3;
   points += (stat.extraPointsMade ?? 0) * 1;
+  points += (stat.sacks ?? 0) * 1;
+  points += (stat.defensiveInterceptions ?? 0) * 2;
+  points += (stat.fumbleRecoveries ?? 0) * 2;
+  points += (stat.defensiveTDs ?? 0) * 6;
+  points += (stat.safeties ?? 0) * 2;
+  if (stat.pointsAllowedPerGame !== undefined) {
+    points += pointsAllowedBonus(stat.pointsAllowedPerGame) * (stat.games ?? 17);
+  }
   return Math.round(points * 10) / 10;
+}
+
+/** Standard tiered points-allowed-per-game bonus/penalty used in most DST scoring formats. */
+function pointsAllowedBonus(pointsAllowedPerGame: number): number {
+  if (pointsAllowedPerGame <= 0) return 10;
+  if (pointsAllowedPerGame <= 6) return 7;
+  if (pointsAllowedPerGame <= 13) return 4;
+  if (pointsAllowedPerGame <= 20) return 1;
+  if (pointsAllowedPerGame <= 27) return 0;
+  if (pointsAllowedPerGame <= 34) return -1;
+  return -4;
 }
 
 export function floorCeiling(median: number, position: Position): { floor: number; median: number; ceiling: number } {

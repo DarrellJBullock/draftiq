@@ -86,7 +86,10 @@ async function fetchPlayers(): Promise<ProviderPlayerRecord[]> {
 
   const raw = (await res.json()) as Record<string, SleeperPlayer>;
   const players = Object.values(raw)
-    .filter((p) => p.sport === "nfl" && p.active && p.status === "Active" && p.team)
+    // Team defense (DEF) entries don't carry a `status` field at all -- only
+    // individual players do -- so requiring status === "Active" for everyone
+    // silently excluded all 32 real team defenses from ever syncing.
+    .filter((p) => p.sport === "nfl" && p.active && p.team && (p.position === "DEF" || p.status === "Active"))
     .map(mapSleeperPlayer)
     .filter((p): p is ProviderPlayerRecord => p !== null);
 

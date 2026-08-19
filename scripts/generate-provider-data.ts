@@ -43,7 +43,10 @@ const DEEP_BENCH_BAND: [number, number] = [0.02, 0.15];
 
 function qualityFor(rand: () => number, position: Position, depthChartOrder: number | null): number {
   const bands = QUALITY_BANDS[position];
-  const band = depthChartOrder && depthChartOrder >= 1 ? bands[depthChartOrder - 1] ?? DEEP_BENCH_BAND : DEEP_BENCH_BAND;
+  // DST is a team unit, not an individually depth-charted player -- Sleeper
+  // never reports a depth_chart_order for it, so it always draws from its
+  // own single band rather than falling through to the deep-bench default.
+  const band = position === "DST" ? bands[0]! : depthChartOrder && depthChartOrder >= 1 ? bands[depthChartOrder - 1] ?? DEEP_BENCH_BAND : DEEP_BENCH_BAND;
   const [lo, hi] = band;
   return Math.min(1, Math.max(0, rand() * (hi - lo) + lo));
 }
@@ -105,6 +108,12 @@ async function main() {
       p.stat.receivingTDs ?? "",
       p.stat.fieldGoalsMade ?? "",
       p.stat.extraPointsMade ?? "",
+      p.stat.sacks ?? "",
+      p.stat.defensiveInterceptions ?? "",
+      p.stat.fumbleRecoveries ?? "",
+      p.stat.defensiveTDs ?? "",
+      p.stat.safeties ?? "",
+      p.stat.pointsAllowedPerGame ?? "",
       fantasyPointsFor(p.stat, p.scoringFormat, player.position),
       floor,
       median,
@@ -123,7 +132,7 @@ async function main() {
   });
 
   const projectionsCsv = [
-    "firstName,lastName,position,scoringFormat,games,attempts,completions,passingYards,passingTDs,interceptions,rushAttempts,rushingYards,rushingTDs,targets,receptions,receivingYards,receivingTDs,fieldGoalsMade,extraPointsMade,fantasyPoints,floor,median,ceiling",
+    "firstName,lastName,position,scoringFormat,games,attempts,completions,passingYards,passingTDs,interceptions,rushAttempts,rushingYards,rushingTDs,targets,receptions,receivingYards,receivingTDs,fieldGoalsMade,extraPointsMade,sacks,defensiveInterceptions,fumbleRecoveries,defensiveTDs,safeties,pointsAllowedPerGame,fantasyPoints,floor,median,ceiling",
     ...projectionRows,
   ].join("\n");
   const adpCsv = ["firstName,lastName,position,scoringFormat,overallADP,positionADP,adpDelta", ...adpRows].join("\n");
