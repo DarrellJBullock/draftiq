@@ -1,0 +1,3 @@
+firstName,lastName,position,nflTeamAbbreviation,jerseyNumber,college,age,heightInches,weightLbs,yearsExperience,isRookie,isFreeAgent,injuryStatus,byeWeek
+Marcus,Fielding,QB,KC,15,Ohio State,26,75,225,4,false,false,HEALTHY,10
+Devin,Marsh,RB,SF,28,Alabama,24,70,210,2,false,false,QUESTIONABLE,9

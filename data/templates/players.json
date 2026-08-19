@@ -1,0 +1,18 @@
+[
+  {
+    "firstName": "Marcus",
+    "lastName": "Fielding",
+    "position": "QB",
+    "nflTeamAbbreviation": "KC",
+    "jerseyNumber": 15,
+    "college": "Ohio State",
+    "age": 26,
+    "heightInches": 75,
+    "weightLbs": 225,
+    "yearsExperience": 4,
+    "isRookie": false,
+    "isFreeAgent": false,
+    "injuryStatus": "HEALTHY",
+    "byeWeek": 10
+  }
+]

@@ -1,0 +1,24 @@
+{
+  "projectName": "draftiq",
+  "description": "Fantasy football draft preparation and draft-day assistant. Next.js App Router + TypeScript + Tailwind v3 + shadcn/ui + PostgreSQL/Prisma + Zod. See CLAUDE.md for conventions.",
+  "env": {
+    "NEXT_TELEMETRY_DISABLED": "1",
+    "DATABASE_URL": "postgresql://darrellbullock@localhost:5432/draftiq",
+    "NEXT_PUBLIC_DEFAULT_SEASON": "2026",
+    "AI_PROVIDER": "fallback"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npm install*)",
+      "Bash(npx prisma *)",
+      "Bash(npx tsx *)",
+      "Bash(npx vitest*)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git commit*)"
+    ]
+  }
+}

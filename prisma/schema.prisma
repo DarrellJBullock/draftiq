@@ -1,0 +1,657 @@
+// DraftIQ data model.
+// Conventions: see CLAUDE.md "Database conventions" section.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Position {
+  QB
+  RB
+  WR
+  TE
+  K
+  DST
+}
+
+enum ScoringFormatPreset {
+  STANDARD
+  HALF_PPR
+  PPR
+  SUPERFLEX
+  TE_PREMIUM
+  CUSTOM
+}
+
+enum RankingSource {
+  CONSENSUS
+  EXPERT
+}
+
+enum DataSource {
+  SEED
+  PROVIDER
+  USER
+}
+
+enum DraftMode {
+  SNAKE
+  LINEAR
+  AUCTION
+}
+
+enum DraftType {
+  LIVE
+  SIMULATOR
+}
+
+enum DraftStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum InjuryStatus {
+  HEALTHY
+  QUESTIONABLE
+  DOUBTFUL
+  OUT
+  IR
+  PUP
+  SUSPENDED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum CPUPersonality {
+  BPA
+  ZERO_RB
+  HERO_RB
+  ZERO_WR
+  EARLY_QB
+  LATE_QB
+  ELITE_TE
+  ROOKIE_HEAVY
+  ADP_FOCUSED
+  SLEEPER_FOCUSED
+}
+
+enum StrategyType {
+  ZERO_RB
+  HERO_RB
+  ROBUST_RB
+  ZERO_WR
+  HERO_WR
+  LATE_ROUND_QB
+  EARLY_QB
+  ELITE_TE
+  LATE_ROUND_TE
+  BALANCED
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  displayName   String
+  authProvider  String   @default("demo")
+  passwordHash  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  leagues          League[]
+  rosters          Roster[]
+  mockDrafts       MockDraft[]
+  trades           Trade[]
+  savedPlayers     SavedPlayer[]
+  userRankings     UserRanking[]
+  userTiers        UserTier[]
+  aiConversations  AIConversation[]
+
+  @@index([email])
+}
+
+// ---------------------------------------------------------------------------
+// Season
+// ---------------------------------------------------------------------------
+
+model Season {
+  id        String   @id @default(cuid())
+  year      Int      @unique
+  label     String
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  playerSeasons    PlayerSeason[]
+  rankings         Ranking[]
+  projections      Projection[]
+  adps             ADP[]
+  tiers            Tier[]
+  drafts           Draft[]
+  userRankings     UserRanking[]
+  userTiers        UserTier[]
+  savedPlayers     SavedPlayer[]
+  aiConversations  AIConversation[]
+  trades           Trade[]
+
+  @@index([year])
+}
+
+// ---------------------------------------------------------------------------
+// NFL reference data
+// ---------------------------------------------------------------------------
+
+model NFLTeam {
+  id             String   @id @default(cuid())
+  name           String
+  abbreviation   String   @unique
+  city           String
+  conference     String
+  division       String
+  primaryColor   String
+  secondaryColor String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  players Player[]
+
+  @@index([abbreviation])
+}
+
+// ---------------------------------------------------------------------------
+// Players
+// ---------------------------------------------------------------------------
+
+model Player {
+  id                  String       @id @default(cuid())
+  firstName           String
+  lastName            String
+  position            Position
+  nflTeamId           String?
+  jerseyNumber        Int?
+  college              String?
+  age                 Int?
+  heightInches        Int?
+  weightLbs           Int?
+  yearsExperience     Int          @default(0)
+  isRookie            Boolean      @default(false)
+  isFreeAgent         Boolean      @default(false)
+  returningFromInjury Boolean      @default(false)
+  injuryStatus        InjuryStatus @default(HEALTHY)
+  dataSource          DataSource   @default(SEED)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  nflTeam        NFLTeam?        @relation(fields: [nflTeamId], references: [id])
+  rookieProfile  RookieProfile?
+  playerSeasons  PlayerSeason[]
+  rankings       Ranking[]
+  projections    Projection[]
+  adps           ADP[]
+  rosterPlayers  RosterPlayer[]
+  draftPicks     DraftPick[]
+  savedBy        SavedPlayer[]
+  userRankings   UserRanking[]
+  userTiers      UserTier[]
+
+  @@index([position])
+  @@index([nflTeamId])
+  @@index([isRookie])
+  @@index([lastName, firstName])
+}
+
+// Per-season snapshot of a player's fantasy-relevant profile. This is the
+// extension point for supporting future seasons without touching Player.
+model PlayerSeason {
+  id                     String     @id @default(cuid())
+  playerId               String
+  seasonId               String
+  byeWeek                Int?
+  overallRank            Int?
+  positionRank            Int?
+  tierId                 String?
+  riskLevel              RiskLevel?
+  trend                  String? // "rising" | "falling" | "stable"
+  fantasyPointsRecent    Float?
+  strengths              String[]
+  weaknesses             String[]
+  riskFactors            String[]
+  teamSituation          String?
+  depthChartCompetition  String?
+  comparablePlayerIds    String[]
+  draftRecommendation    String?
+  isActive               Boolean    @default(true)
+  dataSource             DataSource @default(SEED)
+  createdAt              DateTime   @default(now())
+  updatedAt              DateTime   @updatedAt
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  season Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  tier   Tier?  @relation(fields: [tierId], references: [id])
+
+  @@unique([playerId, seasonId])
+  @@index([seasonId])
+  @@index([tierId])
+}
+
+// Rookie-only extension of Player. Presence of this row is what the app
+// treats as "first-class rookie data" for a given draft class.
+model RookieProfile {
+  id                      String   @id @default(cuid())
+  playerId                String   @unique
+  draftYear               Int
+  draftRound              Int?
+  draftPick               Int?
+  rookieTier              Int?
+  fantasyPositionRank     Int?
+  overallFantasyRank      Int?
+  projectedGames          Float?
+  projectedAttempts       Float?
+  projectedReceptions     Float?
+  projectedTargets        Float?
+  projectedRushingYards   Float?
+  projectedReceivingYards Float?
+  projectedTouchdowns     Float?
+  projectedFantasyPoints  Float?
+  floor                   Float?
+  median                  Float?
+  ceiling                 Float?
+  opportunityScore        Float?
+  competitionScore        Float?
+  landingSpotScore        Float?
+  breakoutScore           Float?
+  analystNotes            String?  @db.Text
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([draftYear])
+  @@index([rookieTier])
+}
+
+// ---------------------------------------------------------------------------
+// Rankings / Projections / ADP / Tiers (system defaults, per season)
+// ---------------------------------------------------------------------------
+
+model Ranking {
+  id            String              @id @default(cuid())
+  seasonId      String
+  playerId      String
+  source        RankingSource       @default(CONSENSUS)
+  scoringFormat ScoringFormatPreset @default(PPR)
+  overallRank   Int
+  positionRank  Int
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  season Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([seasonId, playerId, source, scoringFormat])
+  @@index([seasonId, source, scoringFormat])
+}
+
+model Projection {
+  id                String              @id @default(cuid())
+  seasonId          String
+  playerId          String
+  scoringFormat     ScoringFormatPreset @default(PPR)
+  games             Float?
+  attempts          Float?
+  completions       Float?
+  passingYards      Float?
+  passingTDs        Float?
+  interceptions     Float?
+  rushAttempts      Float?
+  rushingYards      Float?
+  rushingTDs        Float?
+  targets           Float?
+  receptions        Float?
+  receivingYards    Float?
+  receivingTDs      Float?
+  fieldGoalsMade    Float?
+  extraPointsMade   Float?
+  fantasyPoints     Float?
+  floor             Float?
+  median            Float?
+  ceiling           Float?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  season Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([seasonId, playerId, scoringFormat])
+  @@index([seasonId, scoringFormat])
+}
+
+model ADP {
+  id            String              @id @default(cuid())
+  seasonId      String
+  playerId      String
+  scoringFormat ScoringFormatPreset @default(PPR)
+  leagueSize    Int                 @default(12)
+  overallADP    Float
+  positionADP   Float?
+  previousADP   Float?
+  adpDelta      Float?
+  sampleSize    Int?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  season Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([seasonId, playerId, scoringFormat])
+  @@index([seasonId, scoringFormat])
+  @@index([overallADP])
+}
+
+model Tier {
+  id            String              @id @default(cuid())
+  seasonId      String
+  position      Position?
+  scoringFormat ScoringFormatPreset @default(PPR)
+  tierNumber    Int
+  label         String
+  colorHex      String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  season        Season         @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  playerSeasons PlayerSeason[]
+
+  @@unique([seasonId, position, scoringFormat, tierNumber])
+  @@index([seasonId, position, scoringFormat])
+}
+
+// ---------------------------------------------------------------------------
+// User overrides
+// ---------------------------------------------------------------------------
+
+model UserRanking {
+  id            String              @id @default(cuid())
+  userId        String
+  seasonId      String
+  playerId      String
+  scoringFormat ScoringFormatPreset @default(PPR)
+  overallRank   Int
+  positionRank  Int?
+  notes         String?
+  updatedAt     DateTime            @updatedAt
+  createdAt     DateTime            @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  season Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, seasonId, playerId, scoringFormat])
+}
+
+model UserTier {
+  id         String   @id @default(cuid())
+  userId     String
+  seasonId   String
+  playerId   String
+  position   Position
+  tierNumber Int
+  notes      String?
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  season Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, seasonId, playerId])
+}
+
+// ---------------------------------------------------------------------------
+// Leagues
+// ---------------------------------------------------------------------------
+
+model League {
+  id                   String              @id @default(cuid())
+  userId               String
+  name                 String
+  teamCount            Int                 @default(12)
+  scoringFormatPreset  ScoringFormatPreset @default(PPR)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  settings LeagueSettings?
+  drafts   Draft[]
+  rosters  Roster[]
+  trades   Trade[]
+
+  @@index([userId])
+}
+
+model LeagueSettings {
+  id                    String   @id @default(cuid())
+  leagueId              String   @unique
+  passingTDPoints       Float    @default(4)
+  passingYardPoints     Float    @default(0.04)
+  interceptionPoints    Float    @default(-2)
+  rushingTDPoints       Float    @default(6)
+  rushingYardPoints     Float    @default(0.1)
+  receivingTDPoints     Float    @default(6)
+  receivingYardPoints   Float    @default(0.1)
+  receptionPoints       Float    @default(0.5)
+  tePremiumBonus        Float    @default(0)
+  benchSize             Int      @default(6)
+  qbSlots               Int      @default(1)
+  rbSlots               Int      @default(2)
+  wrSlots               Int      @default(2)
+  teSlots               Int      @default(1)
+  flexSlots             Int      @default(1)
+  superflexSlots        Int      @default(0)
+  kSlot                 Boolean  @default(true)
+  dstSlot                Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Drafts
+// ---------------------------------------------------------------------------
+
+model Draft {
+  id                String      @id @default(cuid())
+  leagueId          String
+  seasonId          String
+  mode              DraftMode   @default(SNAKE)
+  type              DraftType   @default(SIMULATOR)
+  status            DraftStatus @default(NOT_STARTED)
+  teamCount         Int
+  rounds            Int
+  userDraftPosition Int
+  cpuPersonalities  Json?
+  currentRound      Int         @default(1)
+  currentPick       Int         @default(1)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  league    League      @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  season    Season      @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  picks     DraftPick[]
+  rosters   Roster[]
+  mockDraft MockDraft?
+
+  @@index([leagueId])
+  @@index([seasonId])
+}
+
+model DraftPick {
+  id           String    @id @default(cuid())
+  draftId      String
+  round        Int
+  pickInRound  Int
+  overallPick  Int
+  teamSlot     Int
+  playerId     String?
+  isUserPick   Boolean   @default(false)
+  valueAtPick  Float?
+  adpAtPick    Float?
+  reachAmount  Float?
+  pickedAt     DateTime?
+  createdAt    DateTime  @default(now())
+
+  draft  Draft   @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  player Player? @relation(fields: [playerId], references: [id])
+
+  @@unique([draftId, overallPick])
+  @@index([draftId, teamSlot])
+}
+
+// ---------------------------------------------------------------------------
+// Rosters (Team Builder + drafted teams)
+// ---------------------------------------------------------------------------
+
+model Roster {
+  id        String   @id @default(cuid())
+  userId    String
+  leagueId  String
+  draftId   String?
+  teamSlot  Int?
+  name      String   @default("My Team")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  league  League         @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  draft   Draft?         @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  players RosterPlayer[]
+
+  @@index([userId])
+  @@index([draftId])
+}
+
+model RosterPlayer {
+  id          String   @id @default(cuid())
+  rosterId    String
+  playerId    String
+  slot        String
+  acquiredVia String   @default("manual")
+  addedAt     DateTime @default(now())
+
+  roster Roster @relation(fields: [rosterId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([rosterId, playerId])
+}
+
+// ---------------------------------------------------------------------------
+// Mock draft history
+// ---------------------------------------------------------------------------
+
+model MockDraft {
+  id                       String              @id @default(cuid())
+  userId                   String
+  draftId                  String              @unique
+  leagueSettingsSnapshot   Json
+  draftPosition            Int
+  teamCount                Int
+  rounds                   Int
+  scoringFormat            ScoringFormatPreset
+  strategyUsed             StrategyType?
+  overallGrade             String
+  gradeScore               Float
+  positionalGrades         Json
+  valueGained              Float
+  reachPenalty             Float
+  bestPicks                Json
+  worstPicks               Json
+  strengths                String[]
+  weaknesses               String[]
+  recommendedImprovements  String[]
+  createdAt                DateTime            @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  draft Draft @relation(fields: [draftId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Trades
+// ---------------------------------------------------------------------------
+
+model Trade {
+  id             String   @id @default(cuid())
+  userId         String
+  leagueId       String?
+  seasonId       String
+  sideAPlayerIds String[]
+  sideBPlayerIds String[]
+  sideAValue     Float
+  sideBValue     Float
+  winner         String
+  gradeA         String?
+  gradeB         String?
+  explanation    String   @db.Text
+  riskNotes      String?
+  upsideNotes    String?
+  createdAt      DateTime @default(now())
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  league League? @relation(fields: [leagueId], references: [id])
+  season Season  @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Misc
+// ---------------------------------------------------------------------------
+
+model SavedPlayer {
+  id        String   @id @default(cuid())
+  userId    String
+  playerId  String
+  seasonId  String
+  note      String?
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  season Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, playerId, seasonId])
+}
+
+model AIConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  seasonId  String?
+  title     String?
+  messages  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  season Season? @relation(fields: [seasonId], references: [id])
+
+  @@index([userId])
+}
