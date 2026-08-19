@@ -1,7 +1,7 @@
 import { getActiveSeason } from "@/lib/season";
 import { getCurrentUserOrDemo } from "@/lib/auth";
 import { getOrCreateDefaultLeague } from "@/lib/queries/leagues";
-import { getOrCreateLiveDraft, getDraftById } from "@/lib/queries/drafts";
+import { getOrCreateLiveDraft, getDraftById, getLeagueConferences } from "@/lib/queries/drafts";
 import { getValuedPlayerPool } from "@/lib/queries/value-pool";
 import { getTeamSlotForPick } from "@/lib/services/draft-engine";
 import { computeSleeperScore } from "@/lib/services/sleeper-bust";
@@ -10,15 +10,39 @@ import type { Position } from "@/types";
 import { PageHeader } from "@/components/shared/page-header";
 import { DraftDayBoard, type AvailablePlayer } from "./draft-day-board";
 import { KeeperPanel, type KeeperRow } from "./keeper-panel";
+import { ConferenceSwitcher } from "./conference-switcher";
+import { prisma } from "@/lib/db/prisma";
 
-export default async function DraftDayPage() {
+export default async function DraftDayPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const raw = await searchParams;
+  const conferenceParam = typeof raw.conference === "string" && raw.conference.trim() ? raw.conference.trim() : undefined;
+
   const [season, user] = await Promise.all([getActiveSeason(), getCurrentUserOrDemo()]);
   const league = await getOrCreateDefaultLeague(user.id);
   const settings = league.settings!;
   const defaultRounds =
     settings.qbSlots + settings.rbSlots + settings.wrSlots + settings.teSlots + settings.flexSlots + settings.superflexSlots + (settings.kSlot ? 1 : 0) + (settings.dstSlot ? 1 : 0) + settings.benchSize;
 
-  const draft = await getOrCreateLiveDraft(user.id, { season: season.year, teamCount: league.teamCount, rounds: defaultRounds, draftPosition: 1, mode: "SNAKE" });
+  const knownConferences = await getLeagueConferences(league.id);
+  const conference = conferenceParam ?? knownConferences[0];
+
+  // For a brand-new conference, reuse another conference's team count if one
+  // already exists (keeps NFC/AFC symmetric); otherwise assume a 2-way split.
+  let defaultTeamCount = league.teamCount;
+  if (conference && !knownConferences.includes(conference)) {
+    const reference = knownConferences.length > 0 ? await prisma.draft.findFirst({ where: { leagueId: league.id, conference: knownConferences[0] } }) : null;
+    defaultTeamCount = reference?.teamCount ?? Math.round(league.teamCount / 2);
+  }
+
+  const draft = await getOrCreateLiveDraft(user.id, {
+    leagueId: league.id,
+    conference,
+    season: season.year,
+    teamCount: defaultTeamCount,
+    rounds: defaultRounds,
+    draftPosition: 1,
+    mode: "SNAKE",
+  });
 
   const [draftRecord, pool] = await Promise.all([
     getDraftById(draft.id),
@@ -26,6 +50,7 @@ export default async function DraftDayPage() {
   ]);
 
   const drafted = draftRecord!;
+  const tabConferences = conference && !knownConferences.includes(conference) ? [...knownConferences, conference] : knownConferences;
   const draftedIds = new Set(drafted.picks.map((p) => p.playerId).filter((id): id is string => !!id));
   const keepers: KeeperRow[] = drafted.picks
     .filter((p) => p.isKeeper)
@@ -64,8 +89,10 @@ export default async function DraftDayPage() {
     <div>
       <PageHeader
         title="Draft Day"
-        description={`${league.name} · ${drafted.teamCount}-team ${drafted.mode.toLowerCase()} draft · ${league.scoringFormatPreset.replace("_", " ")}`}
+        description={`${league.name}${conference ? ` · ${conference}` : ""} · ${drafted.teamCount}-team ${drafted.mode.toLowerCase()} draft · ${league.scoringFormatPreset.replace("_", " ")}`}
       />
+
+      <ConferenceSwitcher conferences={tabConferences} active={conference} />
 
       {isComplete ? (
         <p className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">

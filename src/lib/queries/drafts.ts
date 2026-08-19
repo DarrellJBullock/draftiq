@@ -83,6 +83,7 @@ export async function runAndPersistMockDraft(userId: string, input: SimulateDraf
       mode: input.mode,
       type: "SIMULATOR",
       status: "COMPLETED",
+      conference: input.conference,
       teamCount: input.teamCount,
       rounds: input.rounds,
       userDraftPosition: input.draftPosition,
@@ -132,6 +133,7 @@ export async function runAndPersistMockDraft(userId: string, input: SimulateDraf
     data: {
       userId,
       draftId: draft.id,
+      conference: input.conference,
       leagueSettingsSnapshot: leagueSettings as unknown as object,
       draftPosition: input.draftPosition,
       teamCount: input.teamCount,
@@ -175,16 +177,23 @@ export async function getUserMockDrafts(userId: string) {
   return prisma.mockDraft.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 20 });
 }
 
-/** Finds (or starts) the user's in-progress live Draft Day session. */
+/**
+ * Finds (or starts) the user's in-progress live Draft Day session, scoped to
+ * a specific league and (for a league split into independently-drafted
+ * groups) a specific conference -- so "NFC" and "AFC" can each have their
+ * own live draft in progress under the same league at the same time.
+ */
 export async function getOrCreateLiveDraft(userId: string, setup: Partial<DraftPickInput> = {}) {
+  const league = setup.leagueId ? await prisma.league.findUnique({ where: { id: setup.leagueId } }) : await getOrCreateDefaultLeague(userId);
+  if (!league) throw new Error("League not found");
+
   const existing = await prisma.draft.findFirst({
-    where: { type: "LIVE", status: "IN_PROGRESS", league: { userId } },
+    where: { type: "LIVE", status: "IN_PROGRESS", leagueId: league.id, conference: setup.conference ?? null },
     orderBy: { createdAt: "desc" },
   });
   if (existing) return existing;
 
   const season = await resolveSeason(setup.season);
-  const league = await getOrCreateDefaultLeague(userId);
 
   return prisma.draft.create({
     data: {
@@ -193,6 +202,7 @@ export async function getOrCreateLiveDraft(userId: string, setup: Partial<DraftP
       mode: setup.mode ?? "SNAKE",
       type: "LIVE",
       status: "IN_PROGRESS",
+      conference: setup.conference,
       teamCount: setup.teamCount ?? league.teamCount,
       rounds: setup.rounds ?? 16,
       userDraftPosition: setup.draftPosition ?? 1,
@@ -200,6 +210,17 @@ export async function getOrCreateLiveDraft(userId: string, setup: Partial<DraftP
       currentPick: 1,
     },
   });
+}
+
+/** Distinct conference labels already used for a league's drafts, for building a quick-select UI. */
+export async function getLeagueConferences(leagueId: string): Promise<string[]> {
+  const rows = await prisma.draft.findMany({
+    where: { leagueId, conference: { not: null } },
+    select: { conference: true },
+    distinct: ["conference"],
+    orderBy: { conference: "asc" },
+  });
+  return rows.map((r) => r.conference!).filter(Boolean);
 }
 
 export async function getDraftById(draftId: string) {

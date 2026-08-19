@@ -30,7 +30,7 @@ export default async function MockDraftResultPage({ params }: { params: Promise<
       </Link>
       <PageHeader
         title="Mock Draft Result"
-        description={`${mockDraft.teamCount}-team, pick ${mockDraft.draftPosition} · ${mockDraft.scoringFormat.replace("_", " ")} · ${mockDraft.rounds} rounds`}
+        description={`${mockDraft.conference ? `${mockDraft.conference} · ` : ""}${mockDraft.teamCount}-team, pick ${mockDraft.draftPosition} · ${mockDraft.scoringFormat.replace("_", " ")} · ${mockDraft.rounds} rounds`}
         actions={<Badge className="text-lg px-3 py-1">{mockDraft.overallGrade}</Badge>}
       />
 

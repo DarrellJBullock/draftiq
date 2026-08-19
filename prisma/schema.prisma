@@ -493,6 +493,8 @@ model Draft {
   mode              DraftMode   @default(SNAKE)
   type              DraftType   @default(SIMULATOR)
   status            DraftStatus @default(NOT_STARTED)
+  /** For a league split into independently-drafted groups (e.g. "NFC"/"AFC"); null for a single-draft league. */
+  conference        String?
   teamCount         Int
   rounds            Int
   userDraftPosition Int
@@ -581,6 +583,7 @@ model MockDraft {
   id                       String              @id @default(cuid())
   userId                   String
   draftId                  String              @unique
+  conference               String?
   leagueSettingsSnapshot   Json
   draftPosition            Int
   teamCount                Int

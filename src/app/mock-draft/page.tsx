@@ -3,7 +3,7 @@ import { Swords } from "lucide-react";
 import { getActiveSeason } from "@/lib/season";
 import { getCurrentUserOrDemo } from "@/lib/auth";
 import { getOrCreateDefaultLeague } from "@/lib/queries/leagues";
-import { getUserMockDrafts } from "@/lib/queries/drafts";
+import { getUserMockDrafts, getLeagueConferences } from "@/lib/queries/drafts";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ import { MockDraftSetup } from "./mock-draft-setup";
 export default async function MockDraftPage() {
   const [season, user] = await Promise.all([getActiveSeason(), getCurrentUserOrDemo()]);
   const league = await getOrCreateDefaultLeague(user.id);
-  const mockDrafts = await getUserMockDrafts(user.id);
+  const [mockDrafts, knownConferences] = await Promise.all([getUserMockDrafts(user.id), getLeagueConferences(league.id)]);
 
   const s = league.settings;
   const defaultRounds = s
@@ -24,7 +24,13 @@ export default async function MockDraftPage() {
     <div>
       <PageHeader title="Mock Draft Simulator" description="Draft against realistic CPU opponents and get a full post-draft grade." />
 
-      <MockDraftSetup season={season.year} defaultTeamCount={league.teamCount} defaultScoringFormat={league.scoringFormatPreset} defaultRounds={defaultRounds} />
+      <MockDraftSetup
+        season={season.year}
+        defaultTeamCount={league.teamCount}
+        defaultScoringFormat={league.scoringFormatPreset}
+        defaultRounds={defaultRounds}
+        knownConferences={knownConferences}
+      />
 
       <div className="mt-8">
         <h2 className="mb-3 text-lg font-semibold tracking-tight">Recent mock drafts</h2>
@@ -37,7 +43,8 @@ export default async function MockDraftPage() {
                 <Card className="border-border/70 transition-colors hover:border-primary/40">
                   <CardContent className="flex items-center justify-between p-4">
                     <div>
-                      <p className="font-medium">
+                      <p className="flex items-center gap-1.5 font-medium">
+                        {m.conference ? <Badge variant="outline" className="text-[10px]">{m.conference}</Badge> : null}
                         {m.teamCount}-team, pick {m.draftPosition}
                       </p>
                       <p className="text-xs text-muted-foreground">

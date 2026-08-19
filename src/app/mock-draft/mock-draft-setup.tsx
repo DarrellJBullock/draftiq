@@ -35,11 +35,13 @@ export function MockDraftSetup({
   defaultTeamCount,
   defaultScoringFormat,
   defaultRounds,
+  knownConferences,
 }: {
   season: number;
   defaultTeamCount: number;
   defaultScoringFormat: ScoringFormatPreset;
   defaultRounds: number;
+  knownConferences: string[];
 }) {
   const router = useRouter();
   const [teamCount, setTeamCount] = useState(defaultTeamCount);
@@ -49,6 +51,7 @@ export function MockDraftSetup({
   const [scoringFormat, setScoringFormat] = useState<ScoringFormatPreset>(defaultScoringFormat);
   const [userStrategy, setUserStrategy] = useState<StrategyType | "">("");
   const [cpuMix, setCpuMix] = useState("mixed");
+  const [conference, setConference] = useState(knownConferences[0] ?? "");
   const [keepers, setKeepers] = useState<KeeperEntry[]>([]);
   const [keeperTeamSlot, setKeeperTeamSlot] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -75,6 +78,7 @@ export function MockDraftSetup({
           draftPosition,
           mode,
           scoringFormat,
+          conference: conference.trim() || undefined,
           userStrategy: userStrategy || undefined,
           cpuPersonalities: cpuMix === "mixed" ? undefined : Array.from({ length: teamCount - 1 }, () => cpuMix),
           keepers: keepers.map((k) => ({ teamSlot: k.teamSlot, playerId: k.playerId })),
@@ -173,6 +177,23 @@ export function MockDraftSetup({
               ))}
             </select>
           </div>
+        </div>
+
+        <div>
+          <Label className="text-xs text-muted-foreground">Conference / group (optional)</Label>
+          <input
+            list="mock-draft-conferences"
+            value={conference}
+            onChange={(e) => setConference(e.target.value)}
+            placeholder="e.g. NFC -- leave blank for a single-draft league"
+            maxLength={40}
+            className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+          />
+          <datalist id="mock-draft-conferences">
+            {knownConferences.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
         </div>
 
         <div className="rounded-md border border-dashed border-border p-3">
