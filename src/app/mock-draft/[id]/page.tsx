@@ -153,9 +153,15 @@ export default async function MockDraftResultPage({ params }: { params: Promise<
             </TableHeader>
             <TableBody>
               {mockDraft.draft.picks.map((pick) => (
-                <TableRow key={pick.id} className={cn(pick.isUserPick && "bg-primary/10")}>
+                <TableRow key={pick.id} className={cn(pick.isUserPick && "bg-primary/10", pick.isKeeper && "opacity-80")}>
                   <TableCell className="text-xs tabular-nums text-muted-foreground">
-                    {pick.round}.{String(pick.pickInRound).padStart(2, "0")}
+                    {pick.isKeeper ? (
+                      <Badge variant="outline" className="text-[10px]">
+                        KEEPER
+                      </Badge>
+                    ) : (
+                      `${pick.round}.${String(pick.pickInRound).padStart(2, "0")}`
+                    )}
                   </TableCell>
                   <TableCell className="text-xs tabular-nums text-muted-foreground">
                     {pick.isUserPick ? <Badge className="text-[10px]">YOU</Badge> : `Team ${pick.teamSlot}`}
@@ -169,9 +175,9 @@ export default async function MockDraftResultPage({ params }: { params: Promise<
                     </div>
                   </TableCell>
                   <TableCell>{pick.player ? <PositionBadge position={pick.player.position} /> : null}</TableCell>
-                  <TableCell className="text-right tabular-nums text-muted-foreground">{pick.adpAtPick?.toFixed(1) ?? "-"}</TableCell>
+                  <TableCell className="text-right tabular-nums text-muted-foreground">{pick.isKeeper ? "-" : pick.adpAtPick?.toFixed(1) ?? "-"}</TableCell>
                   <TableCell className={cn("text-right tabular-nums", pick.reachAmount && pick.reachAmount > 5 ? "text-rose-400" : "text-muted-foreground")}>
-                    {pick.reachAmount ? `+${pick.reachAmount.toFixed(1)}` : "-"}
+                    {pick.isKeeper ? "-" : pick.reachAmount ? `+${pick.reachAmount.toFixed(1)}` : "-"}
                   </TableCell>
                 </TableRow>
               ))}

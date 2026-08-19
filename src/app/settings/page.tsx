@@ -67,18 +67,15 @@ export default async function SettingsPage() {
                     <Label htmlFor={`teamCount-${league.id}`} className="text-xs text-muted-foreground">
                       Team count
                     </Label>
-                    <select
+                    <Input
                       id={`teamCount-${league.id}`}
                       name="teamCount"
+                      type="number"
+                      min={4}
+                      max={20}
                       defaultValue={league.teamCount}
-                      className="mt-1 h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
-                    >
-                      {[8, 10, 12, 14, 16, 18, 20].map((n) => (
-                        <option key={n} value={n}>
-                          {n}
-                        </option>
-                      ))}
-                    </select>
+                      className="mt-1 h-8"
+                    />
                   </div>
                   <div>
                     <Label htmlFor={`format-${league.id}`} className="text-xs text-muted-foreground">
@@ -169,13 +166,7 @@ export default async function SettingsPage() {
               <Label htmlFor="new-teamCount" className="text-xs text-muted-foreground">
                 Team count
               </Label>
-              <select id="new-teamCount" name="teamCount" defaultValue={12} className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
-                {[8, 10, 12, 14, 16, 18, 20].map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
+              <Input id="new-teamCount" name="teamCount" type="number" min={4} max={20} defaultValue={12} className="mt-1 h-9" />
             </div>
             <div>
               <Label htmlFor="new-format" className="text-xs text-muted-foreground">

@@ -521,6 +521,8 @@ model DraftPick {
   teamSlot     Int
   playerId     String?
   isUserPick   Boolean   @default(false)
+  /** Pre-assigned from a prior season rather than actually drafted; doesn't consume a normal turn. */
+  isKeeper     Boolean   @default(false)
   valueAtPick  Float?
   adpAtPick    Float?
   reachAmount  Float?

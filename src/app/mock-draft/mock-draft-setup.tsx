@@ -2,14 +2,25 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Swords } from "lucide-react";
+import { Loader2, Swords, Users, X } from "lucide-react";
 import type { ScoringFormatPreset } from "@prisma/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { PlayerPicker } from "@/components/shared/player-picker";
+import { PositionBadge } from "@/components/shared/position-badge";
 import { STRATEGY_LABELS } from "@/lib/services/strategy-engine";
 import { SCORING_FORMAT_LABELS } from "@/types";
-import type { StrategyType } from "@/types";
+import type { PlayerWithContext, StrategyType } from "@/types";
+
+interface KeeperEntry {
+  teamSlot: number;
+  playerId: string;
+  firstName: string;
+  lastName: string;
+  position: PlayerWithContext["position"];
+}
 
 const CPU_MIX_OPTIONS: { value: string; label: string }[] = [
   { value: "mixed", label: "Mixed personalities (recommended)" },
@@ -19,17 +30,36 @@ const CPU_MIX_OPTIONS: { value: string; label: string }[] = [
   { value: "SLEEPER_FOCUSED", label: "All sleeper-focused" },
 ];
 
-export function MockDraftSetup({ season, defaultTeamCount, defaultScoringFormat }: { season: number; defaultTeamCount: number; defaultScoringFormat: ScoringFormatPreset }) {
+export function MockDraftSetup({
+  season,
+  defaultTeamCount,
+  defaultScoringFormat,
+  defaultRounds,
+}: {
+  season: number;
+  defaultTeamCount: number;
+  defaultScoringFormat: ScoringFormatPreset;
+  defaultRounds: number;
+}) {
   const router = useRouter();
   const [teamCount, setTeamCount] = useState(defaultTeamCount);
   const [draftPosition, setDraftPosition] = useState(Math.ceil(defaultTeamCount / 2));
-  const [rounds, setRounds] = useState(16);
+  const [rounds, setRounds] = useState(defaultRounds);
   const [mode, setMode] = useState<"SNAKE" | "LINEAR">("SNAKE");
   const [scoringFormat, setScoringFormat] = useState<ScoringFormatPreset>(defaultScoringFormat);
   const [userStrategy, setUserStrategy] = useState<StrategyType | "">("");
   const [cpuMix, setCpuMix] = useState("mixed");
+  const [keepers, setKeepers] = useState<KeeperEntry[]>([]);
+  const [keeperTeamSlot, setKeeperTeamSlot] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function addKeeper(player: PlayerWithContext) {
+    setKeepers((prev) => [
+      ...prev.filter((k) => k.teamSlot !== keeperTeamSlot),
+      { teamSlot: keeperTeamSlot, playerId: player.id, firstName: player.firstName, lastName: player.lastName, position: player.position },
+    ]);
+  }
 
   async function startDraft() {
     setLoading(true);
@@ -47,6 +77,7 @@ export function MockDraftSetup({ season, defaultTeamCount, defaultScoringFormat 
           scoringFormat,
           userStrategy: userStrategy || undefined,
           cpuPersonalities: cpuMix === "mixed" ? undefined : Array.from({ length: teamCount - 1 }, () => cpuMix),
+          keepers: keepers.map((k) => ({ teamSlot: k.teamSlot, playerId: k.playerId })),
         }),
       });
       const data = await res.json();
@@ -67,21 +98,18 @@ export function MockDraftSetup({ season, defaultTeamCount, defaultScoringFormat 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div>
             <Label className="text-xs text-muted-foreground">League size</Label>
-            <select
+            <input
+              type="number"
+              min={4}
+              max={20}
               value={teamCount}
               onChange={(e) => {
-                const v = Number(e.target.value);
+                const v = Number(e.target.value) || teamCount;
                 setTeamCount(v);
                 setDraftPosition((p) => Math.min(p, v));
               }}
               className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-            >
-              {[8, 10, 12, 14, 16].map((n) => (
-                <option key={n} value={n}>
-                  {n} teams
-                </option>
-              ))}
-            </select>
+            />
           </div>
           <div>
             <Label className="text-xs text-muted-foreground">Your draft position</Label>
@@ -95,13 +123,14 @@ export function MockDraftSetup({ season, defaultTeamCount, defaultScoringFormat 
           </div>
           <div>
             <Label className="text-xs text-muted-foreground">Rounds</Label>
-            <select value={rounds} onChange={(e) => setRounds(Number(e.target.value))} className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
-              {[12, 14, 15, 16, 18].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
+            <input
+              type="number"
+              min={1}
+              max={25}
+              value={rounds}
+              onChange={(e) => setRounds(Number(e.target.value) || rounds)}
+              className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+            />
           </div>
           <div>
             <Label className="text-xs text-muted-foreground">Draft type</Label>
@@ -143,6 +172,44 @@ export function MockDraftSetup({ season, defaultTeamCount, defaultScoringFormat 
                 </option>
               ))}
             </select>
+          </div>
+        </div>
+
+        <div className="rounded-md border border-dashed border-border p-3">
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <Users className="h-3.5 w-3.5" /> Keepers (optional)
+          </p>
+          {keepers.length > 0 ? (
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              {keepers
+                .sort((a, b) => a.teamSlot - b.teamSlot)
+                .map((k) => (
+                  <Badge key={k.teamSlot} variant="outline" className="gap-1.5 pr-1">
+                    Team {k.teamSlot}: <PositionBadge position={k.position} className="h-4 min-w-6 px-1 text-[10px]" />
+                    {k.firstName} {k.lastName}
+                    <button onClick={() => setKeepers((prev) => prev.filter((x) => x.teamSlot !== k.teamSlot))} className="ml-1 rounded hover:text-rose-400">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+            </div>
+          ) : null}
+          <div className="flex flex-wrap items-end gap-2">
+            <select value={keeperTeamSlot} onChange={(e) => setKeeperTeamSlot(Number(e.target.value))} className="h-8 rounded-md border border-input bg-background px-2 text-sm">
+              {Array.from({ length: teamCount }, (_, i) => i + 1).map((n) => (
+                <option key={n} value={n}>
+                  Team {n}
+                  {n === draftPosition ? " (You)" : ""}
+                </option>
+              ))}
+            </select>
+            <PlayerPicker
+              season={season}
+              scoringFormat={scoringFormat}
+              excludeIds={keepers.map((k) => k.playerId)}
+              onSelect={addKeeper}
+              triggerLabel="Add keeper"
+            />
           </div>
         </div>
 

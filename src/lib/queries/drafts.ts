@@ -11,7 +11,7 @@ import {
   type DraftPoolPlayer,
   type RosterSlotsNeeded,
 } from "@/lib/services/draft-engine";
-import type { DraftPickInput, SimulateDraftInput } from "@/lib/validation/draft";
+import type { AddKeeperInput, DraftPickInput, SimulateDraftInput } from "@/lib/validation/draft";
 
 const ALL_PERSONALITIES: CPUPersonality[] = [
   "BPA",
@@ -46,15 +46,18 @@ export async function runAndPersistMockDraft(userId: string, input: SimulateDraf
     benchSize: 6,
   };
 
+  const keeperPlayerIds = new Set(input.keepers.map((k) => k.playerId));
   const pool = await getValuedPlayerPool(season.id, input.scoringFormat);
-  const draftPool: DraftPoolPlayer[] = pool.map((p) => ({
-    id: p.id,
-    position: p.position,
-    overallRank: p.ranking?.overallRank ?? 999,
-    adp: p.adp?.overallADP ?? 999,
-    projectedPoints: p.projection?.fantasyPoints ?? 0,
-    isRookie: p.isRookie,
-  }));
+  const draftPool: DraftPoolPlayer[] = pool
+    .filter((p) => !keeperPlayerIds.has(p.id))
+    .map((p) => ({
+      id: p.id,
+      position: p.position,
+      overallRank: p.ranking?.overallRank ?? 999,
+      adp: p.adp?.overallADP ?? 999,
+      projectedPoints: p.projection?.fantasyPoints ?? 0,
+      isRookie: p.isRookie,
+    }));
 
   const cpuPersonalities =
     input.cpuPersonalities && input.cpuPersonalities.length > 0
@@ -104,6 +107,22 @@ export async function runAndPersistMockDraft(userId: string, input: SimulateDraf
       pickedAt: new Date(),
     })),
   });
+
+  if (input.keepers.length > 0) {
+    await prisma.draftPick.createMany({
+      data: input.keepers.map((k, i) => ({
+        draftId: draft.id,
+        round: 0,
+        pickInRound: 0,
+        overallPick: -(i + 1), // negative sentinel, distinct from real picks (always >= 1)
+        teamSlot: k.teamSlot,
+        playerId: k.playerId,
+        isUserPick: k.teamSlot === input.draftPosition,
+        isKeeper: true,
+        pickedAt: new Date(),
+      })),
+    });
+  }
 
   const playerInfo = new Map(pool.map((p) => [p.id, { playerId: p.id, position: p.position, name: `${p.firstName} ${p.lastName}` }]));
   const userPicks = picks.filter((p) => p.isUserPick);
@@ -233,4 +252,35 @@ export async function submitDraftPick(userId: string, input: DraftPickInput) {
   });
 
   return { draft: updated, completed };
+}
+
+/**
+ * Records a player pre-assigned to a team from a prior season (a keeper).
+ * Unlike `submitDraftPick`, this does not consume a normal turn -- it
+ * doesn't advance currentPick/currentRound, it just takes the player off
+ * the board for the rest of the draft.
+ */
+export async function addKeeper(userId: string, input: AddKeeperInput) {
+  const draft = input.draftId ? await prisma.draft.findUnique({ where: { id: input.draftId } }) : await getOrCreateLiveDraft(userId, input);
+  if (!draft) throw new Error("Draft not found");
+  if (draft.status === "COMPLETED") throw new Error("This draft has already finished");
+
+  const alreadyTaken = await prisma.draftPick.findFirst({ where: { draftId: draft.id, playerId: input.playerId } });
+  if (alreadyTaken) throw new Error("That player is already drafted or kept in this draft");
+
+  const existingKeeperCount = await prisma.draftPick.count({ where: { draftId: draft.id, isKeeper: true } });
+
+  return prisma.draftPick.create({
+    data: {
+      draftId: draft.id,
+      round: 0,
+      pickInRound: 0,
+      overallPick: -(existingKeeperCount + 1), // negative sentinel, distinct from real picks (always >= 1)
+      teamSlot: input.teamSlot,
+      playerId: input.playerId,
+      isUserPick: input.teamSlot === draft.userDraftPosition,
+      isKeeper: true,
+      pickedAt: new Date(),
+    },
+  });
 }

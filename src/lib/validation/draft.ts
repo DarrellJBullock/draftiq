@@ -1,6 +1,13 @@
 import { z } from "zod";
 import { cpuPersonalitySchema, draftModeSchema, scoringFormatSchema, strategyTypeSchema } from "./common";
 
+/** A player pre-assigned to a team from a prior season -- kept, not drafted. */
+export const keeperSchema = z.object({
+  teamSlot: z.number().int().min(1),
+  playerId: z.string(),
+});
+export type KeeperInput = z.infer<typeof keeperSchema>;
+
 export const simulateDraftSchema = z.object({
   season: z.number().int(),
   leagueId: z.string().optional(),
@@ -11,6 +18,7 @@ export const simulateDraftSchema = z.object({
   scoringFormat: scoringFormatSchema.default("PPR"),
   userStrategy: strategyTypeSchema.optional(),
   cpuPersonalities: z.array(cpuPersonalitySchema).optional(),
+  keepers: z.array(keeperSchema).default([]),
 });
 
 export type SimulateDraftInput = z.infer<typeof simulateDraftSchema>;
@@ -28,6 +36,20 @@ export const draftPickSchema = z.object({
 });
 
 export type DraftPickInput = z.infer<typeof draftPickSchema>;
+
+export const addKeeperSchema = z.object({
+  draftId: z.string().optional(),
+  playerId: z.string(),
+  teamSlot: z.number().int().min(1),
+  // Setup fields, used only to create a new live draft on the first call.
+  season: z.number().int().optional(),
+  teamCount: z.number().int().min(4).max(20).optional(),
+  rounds: z.number().int().min(1).max(25).optional(),
+  draftPosition: z.number().int().min(1).optional(),
+  mode: draftModeSchema.optional(),
+});
+
+export type AddKeeperInput = z.infer<typeof addKeeperSchema>;
 
 export const draftRecommendationQuerySchema = z.object({
   draftId: z.string().optional(),

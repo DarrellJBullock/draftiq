@@ -9,13 +9,16 @@ import { SKILL_POSITIONS } from "@/types";
 import type { Position } from "@/types";
 import { PageHeader } from "@/components/shared/page-header";
 import { DraftDayBoard, type AvailablePlayer } from "./draft-day-board";
+import { KeeperPanel, type KeeperRow } from "./keeper-panel";
 
 export default async function DraftDayPage() {
   const [season, user] = await Promise.all([getActiveSeason(), getCurrentUserOrDemo()]);
   const league = await getOrCreateDefaultLeague(user.id);
   const settings = league.settings!;
+  const defaultRounds =
+    settings.qbSlots + settings.rbSlots + settings.wrSlots + settings.teSlots + settings.flexSlots + settings.superflexSlots + (settings.kSlot ? 1 : 0) + (settings.dstSlot ? 1 : 0) + settings.benchSize;
 
-  const draft = await getOrCreateLiveDraft(user.id, { season: season.year, teamCount: league.teamCount, rounds: 16, draftPosition: 1, mode: "SNAKE" });
+  const draft = await getOrCreateLiveDraft(user.id, { season: season.year, teamCount: league.teamCount, rounds: defaultRounds, draftPosition: 1, mode: "SNAKE" });
 
   const [draftRecord, pool] = await Promise.all([
     getDraftById(draft.id),
@@ -24,6 +27,9 @@ export default async function DraftDayPage() {
 
   const drafted = draftRecord!;
   const draftedIds = new Set(drafted.picks.map((p) => p.playerId).filter((id): id is string => !!id));
+  const keepers: KeeperRow[] = drafted.picks
+    .filter((p) => p.isKeeper)
+    .map((p) => ({ id: p.id, teamSlot: p.teamSlot, isUserPick: p.isUserPick, player: p.player }));
 
   const available: AvailablePlayer[] = pool
     .filter((p) => !draftedIds.has(p.id))
@@ -66,17 +72,20 @@ export default async function DraftDayPage() {
           This draft is complete. Head to Team Builder to review your roster, or start a new live draft from the database directly.
         </p>
       ) : (
-        <DraftDayBoard
-          draftId={drafted.id}
-          season={season.year}
-          scoringFormat={league.scoringFormatPreset}
-          currentRound={drafted.currentRound}
-          currentPick={drafted.currentPick}
-          userDraftPosition={drafted.userDraftPosition}
-          onTheClock={onTheClock}
-          players={available}
-          positionNeeds={positionNeeds}
-        />
+        <>
+          <KeeperPanel draftId={drafted.id} teamCount={drafted.teamCount} season={season.year} scoringFormat={league.scoringFormatPreset} keepers={keepers} />
+          <DraftDayBoard
+            draftId={drafted.id}
+            season={season.year}
+            scoringFormat={league.scoringFormatPreset}
+            currentRound={drafted.currentRound}
+            currentPick={drafted.currentPick}
+            userDraftPosition={drafted.userDraftPosition}
+            onTheClock={onTheClock}
+            players={available}
+            positionNeeds={positionNeeds}
+          />
+        </>
       )}
     </div>
   );

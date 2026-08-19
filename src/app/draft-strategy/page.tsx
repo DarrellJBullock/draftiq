@@ -71,13 +71,7 @@ export default async function DraftStrategyPage({
       <form method="get" className="mb-6 flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card/50 p-3">
         <div>
           <label className="mb-1 block text-xs font-medium text-muted-foreground">Team count</label>
-          <select name="teamCount" defaultValue={teamCount} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
-            {[8, 10, 12, 14, 16].map((n) => (
-              <option key={n} value={n}>
-                {n} teams
-              </option>
-            ))}
-          </select>
+          <input type="number" name="teamCount" min={4} max={20} defaultValue={teamCount} className="h-9 w-20 rounded-md border border-input bg-background px-2 text-sm" />
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-muted-foreground">Draft position</label>

@@ -15,11 +15,16 @@ export default async function MockDraftPage() {
   const league = await getOrCreateDefaultLeague(user.id);
   const mockDrafts = await getUserMockDrafts(user.id);
 
+  const s = league.settings;
+  const defaultRounds = s
+    ? s.qbSlots + s.rbSlots + s.wrSlots + s.teSlots + s.flexSlots + s.superflexSlots + (s.kSlot ? 1 : 0) + (s.dstSlot ? 1 : 0) + s.benchSize
+    : 16;
+
   return (
     <div>
       <PageHeader title="Mock Draft Simulator" description="Draft against realistic CPU opponents and get a full post-draft grade." />
 
-      <MockDraftSetup season={season.year} defaultTeamCount={league.teamCount} defaultScoringFormat={league.scoringFormatPreset} />
+      <MockDraftSetup season={season.year} defaultTeamCount={league.teamCount} defaultScoringFormat={league.scoringFormatPreset} defaultRounds={defaultRounds} />
 
       <div className="mt-8">
         <h2 className="mb-3 text-lg font-semibold tracking-tight">Recent mock drafts</h2>
