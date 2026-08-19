@@ -26,12 +26,19 @@ export default async function DraftDayPage({ searchParams }: { searchParams: Pro
   const knownConferences = await getLeagueConferences(league.id);
   const conference = conferenceParam ?? knownConferences[0];
 
-  // For a brand-new conference, reuse another conference's team count if one
-  // already exists (keeps NFC/AFC symmetric); otherwise assume a 2-way split.
+  // If this conference already has a draft (mock or live), reuse its team
+  // count. Otherwise, if a *different* conference already exists, reuse
+  // that one's count (keeps NFC/AFC symmetric); if this is the very first
+  // conference this league has ever used, assume a 2-way split.
   let defaultTeamCount = league.teamCount;
-  if (conference && !knownConferences.includes(conference)) {
-    const reference = knownConferences.length > 0 ? await prisma.draft.findFirst({ where: { leagueId: league.id, conference: knownConferences[0] } }) : null;
-    defaultTeamCount = reference?.teamCount ?? Math.round(league.teamCount / 2);
+  if (conference) {
+    const sameConference = await prisma.draft.findFirst({ where: { leagueId: league.id, conference }, orderBy: { createdAt: "desc" } });
+    if (sameConference) {
+      defaultTeamCount = sameConference.teamCount;
+    } else {
+      const otherConference = knownConferences.length > 0 ? await prisma.draft.findFirst({ where: { leagueId: league.id, conference: knownConferences[0] } }) : null;
+      defaultTeamCount = otherConference?.teamCount ?? Math.round(league.teamCount / 2);
+    }
   }
 
   const draft = await getOrCreateLiveDraft(user.id, {
