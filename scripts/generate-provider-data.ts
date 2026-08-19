@@ -1,9 +1,9 @@
 /**
- * Generates ADP + projection rows for players sourced from a live provider
- * (dataSource: "PROVIDER" -- real names/teams, but no real ADP/projection
- * feed exists for free) and imports them through the app's actual CSV
- * import pipeline (parse -> validate -> import), the same code path
- * `/api/import` and the `/import` page use.
+ * Generates rankings + ADP + projection rows for players sourced from a live
+ * provider (dataSource: "PROVIDER" -- real names/teams, but no real
+ * ranking/ADP/projection feed exists for free) and imports them through the
+ * app's actual CSV import pipeline (parse -> validate -> import), the same
+ * code path `/api/import` and the `/import` page use.
  *
  * Quality is estimated from Sleeper's real `depth_chart_order` per team --
  * an objective, current signal (1 = current starter) -- run through the
@@ -13,7 +13,7 @@
  * This is a generated estimate, not a real ADP/projections feed --
  * dataSource is set to "USER" (import-sourced) accordingly.
  *
- * Usage: npx tsx scripts/generate-provider-projections.ts
+ * Usage: npx tsx scripts/generate-provider-data.ts
  */
 import { PrismaClient, type Position } from "@prisma/client";
 import { mulberry32 } from "../prisma/seed/rng";
@@ -117,13 +117,21 @@ async function main() {
     return [csvEscape(player.firstName), csvEscape(player.lastName), player.position, a.scoringFormat, a.overallADP, a.positionADP, a.adpDelta].join(",");
   });
 
+  const rankingRows = derived.rankings.map((r) => {
+    const player = playerById.get(r.playerId)!;
+    return [csvEscape(player.firstName), csvEscape(player.lastName), player.position, r.scoringFormat, r.source, r.overallRank, r.positionRank].join(",");
+  });
+
   const projectionsCsv = [
     "firstName,lastName,position,scoringFormat,games,attempts,completions,passingYards,passingTDs,interceptions,rushAttempts,rushingYards,rushingTDs,targets,receptions,receivingYards,receivingTDs,fieldGoalsMade,extraPointsMade,fantasyPoints,floor,median,ceiling",
     ...projectionRows,
   ].join("\n");
   const adpCsv = ["firstName,lastName,position,scoringFormat,overallADP,positionADP,adpDelta", ...adpRows].join("\n");
+  const rankingsCsv = ["firstName,lastName,position,scoringFormat,source,overallRank,positionRank", ...rankingRows].join("\n");
 
-  console.log(`Generated ${SEED_FORMATS.length} formats x ${players.length} players = ${projectionRows.length} projection rows, ${adpRows.length} ADP rows.`);
+  console.log(
+    `Generated ${SEED_FORMATS.length} formats x ${players.length} players = ${projectionRows.length} projection rows, ${adpRows.length} ADP rows, ${rankingRows.length} ranking rows.`
+  );
 
   console.log("Importing projections via the app's CSV import pipeline...");
   const projValidation = validateImportRows("projections", parseImportFile(projectionsCsv, "projections.csv").rows);
@@ -136,6 +144,12 @@ async function main() {
   const adpOutcome = await importRows("adp", SEASON_YEAR, adpValidation.validRows as never);
   console.log(`ADP: ${adpOutcome.imported} imported, ${adpOutcome.skipped.length} skipped, ${adpValidation.errorCount} validation errors.`);
   if (adpValidation.errorCount > 0) console.log(adpValidation.issues.slice(0, 10));
+
+  console.log("Importing rankings via the app's CSV import pipeline...");
+  const rankingValidation = validateImportRows("rankings", parseImportFile(rankingsCsv, "rankings.csv").rows);
+  const rankingOutcome = await importRows("rankings", SEASON_YEAR, rankingValidation.validRows as never);
+  console.log(`Rankings: ${rankingOutcome.imported} imported, ${rankingOutcome.skipped.length} skipped, ${rankingValidation.errorCount} validation errors.`);
+  if (rankingValidation.errorCount > 0) console.log(rankingValidation.issues.slice(0, 10));
 
   await prisma.$disconnect();
 }

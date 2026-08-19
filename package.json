@@ -14,7 +14,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:generate": "prisma generate",
-    "generate:provider-projections": "tsx scripts/generate-provider-projections.ts"
+    "generate:provider-data": "tsx scripts/generate-provider-data.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
