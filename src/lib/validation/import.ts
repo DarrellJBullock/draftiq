@@ -93,6 +93,8 @@ export const rookieImportRowSchema = z.object({
   draftRound: z.coerce.number().int().min(1).max(7).optional(),
   draftPick: z.coerce.number().int().min(1).optional(),
   rookieTier: z.coerce.number().int().min(1).max(4).optional(),
+  fantasyPositionRank: z.coerce.number().int().min(1).optional(),
+  overallFantasyRank: z.coerce.number().int().min(1).optional(),
   projectedFantasyPoints: z.coerce.number().optional(),
   floor: z.coerce.number().optional(),
   median: z.coerce.number().optional(),

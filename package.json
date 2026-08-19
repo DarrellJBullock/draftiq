@@ -15,7 +15,8 @@
     "db:studio": "prisma studio",
     "db:generate": "prisma generate",
     "generate:provider-data": "tsx scripts/generate-provider-data.ts",
-    "db:remove-demo-players": "tsx scripts/remove-demo-players.ts"
+    "db:remove-demo-players": "tsx scripts/remove-demo-players.ts",
+    "generate:provider-rookie-profiles": "tsx scripts/generate-provider-rookie-profiles.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

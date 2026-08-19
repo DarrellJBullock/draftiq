@@ -1,2 +1,2 @@
-firstName,lastName,position,nflTeamAbbreviation,college,age,draftRound,draftPick,rookieTier,projectedFantasyPoints,floor,median,ceiling,opportunityScore,competitionScore,landingSpotScore,breakoutScore,analystNotes
-Trey,Whitfield,WR,DET,Georgia,21,1,12,1,215.4,150.2,215.4,280.6,82,35,78,80,"Immediate WR2 with a clear path to targets in a pass-heavy offense."
+firstName,lastName,position,nflTeamAbbreviation,college,age,draftRound,draftPick,rookieTier,fantasyPositionRank,overallFantasyRank,projectedFantasyPoints,floor,median,ceiling,opportunityScore,competitionScore,landingSpotScore,breakoutScore,analystNotes
+Trey,Whitfield,WR,DET,Georgia,21,1,12,1,3,8,215.4,150.2,215.4,280.6,82,35,78,80,"Immediate WR2 with a clear path to targets in a pass-heavy offense."

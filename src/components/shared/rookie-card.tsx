@@ -39,7 +39,7 @@ export function RookieCard({
 
           <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
             <Badge variant="outline" className="text-[10px]">
-              {rp?.draftRound ? `Rd ${rp.draftRound}, Pk ${rp.draftPick ?? "?"}` : "UDFA"}
+              {rp?.draftRound ? `Rd ${rp.draftRound}, Pk ${rp.draftPick ?? "?"}` : "Draft info N/A"}
             </Badge>
             {rp?.overallFantasyRank ? <span>Rookie #{rp.overallFantasyRank}</span> : null}
             {player.adp?.overallADP ? <span>&middot; ADP {player.adp.overallADP.toFixed(1)}</span> : null}

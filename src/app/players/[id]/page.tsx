@@ -240,7 +240,7 @@ export default async function PlayerDetailPage({ params }: { params: Promise<{ i
             <CardContent className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 <Badge variant="outline">
-                  {rp.draftRound ? `Round ${rp.draftRound}` : "UDFA"}
+                  {rp.draftRound ? `Round ${rp.draftRound}` : "Draft info N/A"}
                   {rp.draftPick ? `, Pick ${rp.draftPick}` : ""}
                 </Badge>
                 {rp.rookieTier ? <Badge variant="outline">Tier {rp.rookieTier}</Badge> : null}
