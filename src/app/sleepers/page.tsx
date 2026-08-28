@@ -12,6 +12,7 @@ export default async function SleepersPage() {
   const league = await getOrCreateDefaultLeague(user.id);
 
   const sleepers = await getSleepers(season.id, league.scoringFormatPreset, 30);
+  const showDdaflAdjustment = !!league.mflLeagueId;
 
   return (
     <div>
@@ -20,12 +21,20 @@ export default async function SleepersPage() {
         description={`${season.label} · ${league.scoringFormatPreset.replace("_", " ")} · players the market is pricing below their ranking, opportunity, and situation`}
       />
 
+      {showDdaflAdjustment ? (
+        <p className="mb-4 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">DDAFL Est.</span> is an estimated adjustment for your league&apos;s
+          distance-tiered scoring bonuses, based on yards-per-touch efficiency -- not an exact calculation, since real
+          per-play distance data isn&apos;t available from season projections.
+        </p>
+      ) : null}
+
       {sleepers.length === 0 ? (
         <EmptyState icon={Moon} title="No sleeper candidates yet" description="Sleepers appear once ADP and ranking data are loaded for this season." />
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {sleepers.map((s) => (
-            <SleeperCard key={s.player.id} sleeper={s} />
+            <SleeperCard key={s.player.id} sleeper={s} showDdaflAdjustment={showDdaflAdjustment} />
           ))}
         </div>
       )}

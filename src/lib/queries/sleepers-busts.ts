@@ -9,6 +9,7 @@ export async function getSleepers(seasonId: string, scoringFormat: ScoringFormat
     .filter((p) => SKILL_POSITIONS.includes(p.position) && p.adp?.overallADP && p.ranking?.overallRank)
     .map((p) => ({
       player: p,
+      ddaflAdjustment: p.ddaflAdjustment,
       ...computeSleeperScore({
         adp: p.adp!.overallADP,
         overallRank: p.ranking!.overallRank,

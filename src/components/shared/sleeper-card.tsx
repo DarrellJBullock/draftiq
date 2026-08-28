@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PositionBadge } from "./position-badge";
 import { RookieBadge } from "./rookie-badge";
 import { ValueIndicator } from "./value-indicator";
+import { DdaflAdjustmentBadge } from "./ddafl-adjustment-badge";
 import type { PlayerWithContext } from "@/types";
 
 export interface SleeperCardData {
@@ -11,10 +12,12 @@ export interface SleeperCardData {
   reasons: string[];
   idealDraftRangeStart: number;
   idealDraftRangeEnd: number;
+  /** Estimated multiplier for DDAFL's distance-tiered scoring bonuses -- 1 means no adjustment. */
+  ddaflAdjustment?: number;
 }
 
 /** Card summarizing why a player is undervalued relative to their ADP. */
-export function SleeperCard({ sleeper }: { sleeper: SleeperCardData }) {
+export function SleeperCard({ sleeper, showDdaflAdjustment = false }: { sleeper: SleeperCardData; showDdaflAdjustment?: boolean }) {
   const { player } = sleeper;
 
   return (
@@ -37,7 +40,7 @@ export function SleeperCard({ sleeper }: { sleeper: SleeperCardData }) {
       <CardContent className="space-y-3">
         <ValueIndicator score={sleeper.sleeperScore} label="Sleeper score" />
 
-        <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className={`grid gap-2 text-xs ${showDdaflAdjustment ? "grid-cols-3" : "grid-cols-2"}`}>
           <div className="rounded-md bg-muted/50 px-2 py-1.5">
             <p className="text-muted-foreground">ADP</p>
             <p className="font-semibold tabular-nums">{player.adp?.overallADP?.toFixed(1) ?? "-"}</p>
@@ -46,6 +49,14 @@ export function SleeperCard({ sleeper }: { sleeper: SleeperCardData }) {
             <p className="text-muted-foreground">Proj. Pts</p>
             <p className="font-semibold tabular-nums">{player.projection?.fantasyPoints?.toFixed(1) ?? "-"}</p>
           </div>
+          {showDdaflAdjustment ? (
+            <div className="rounded-md bg-muted/50 px-2 py-1.5">
+              <p className="text-muted-foreground">DDAFL Est.</p>
+              <p className="font-semibold tabular-nums">
+                <DdaflAdjustmentBadge adjustment={sleeper.ddaflAdjustment ?? 1} />
+              </p>
+            </div>
+          ) : null}
         </div>
 
         {sleeper.reasons.length > 0 ? (
