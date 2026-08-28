@@ -57,6 +57,20 @@ export const addKeeperSchema = z.object({
 
 export type AddKeeperInput = z.infer<typeof addKeeperSchema>;
 
+export const mflSyncSchema = z.object({
+  draftId: z.string(),
+});
+export type MflSyncInput = z.infer<typeof mflSyncSchema>;
+
+export const resolveMflPickSchema = z.object({
+  draftId: z.string(),
+  round: z.number().int().min(1),
+  pickInRound: z.number().int().min(1),
+  teamSlot: z.number().int().min(1),
+  playerId: z.string(),
+});
+export type ResolveMflPickInput = z.infer<typeof resolveMflPickSchema>;
+
 export const draftRecommendationQuerySchema = z.object({
   draftId: z.string().optional(),
   season: z.number().int(),

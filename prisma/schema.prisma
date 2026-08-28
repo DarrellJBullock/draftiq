@@ -443,6 +443,10 @@ model League {
   name                 String
   teamCount            Int                 @default(12)
   scoringFormatPreset  ScoringFormatPreset @default(PPR)
+  /** MyFantasyLeague league id (the numeric L= value), for pulling live draft picks. */
+  mflLeagueId          String?
+  /** MyFantasyLeague host subdomain, e.g. "www45". */
+  mflHost              String?
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
 

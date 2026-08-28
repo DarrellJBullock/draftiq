@@ -29,5 +29,21 @@ export const createLeagueSchema = z.object({
   settings: leagueSettingsSchema.partial().optional(),
 });
 
+export const mflConfigSchema = z.object({
+  mflLeagueId: z
+    .string()
+    .trim()
+    .regex(/^\d+$/, "MFL league ID is numeric")
+    .or(z.literal(""))
+    .transform((v) => v || null),
+  mflHost: z
+    .string()
+    .trim()
+    .regex(/^www\d+$/, 'Host looks like "www45"')
+    .or(z.literal(""))
+    .transform((v) => v || null),
+});
+
 export type LeagueSettingsInput = z.infer<typeof leagueSettingsSchema>;
 export type CreateLeagueInput = z.infer<typeof createLeagueSchema>;
+export type MflConfigInput = z.infer<typeof mflConfigSchema>;

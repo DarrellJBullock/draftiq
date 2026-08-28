@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { createLeagueAction, deleteLeagueAction, updateLeagueAction, updateLeagueSettingsAction } from "./actions";
+import { createLeagueAction, deleteLeagueAction, updateLeagueAction, updateLeagueSettingsAction, updateMflConfigAction } from "./actions";
 
 const SCORING_FORMATS = Object.entries(SCORING_FORMAT_LABELS);
 
@@ -36,6 +36,7 @@ export default async function SettingsPage() {
           const s = league.settings!;
           const updateLeagueWithId = updateLeagueAction.bind(null, league.id);
           const updateSettingsWithId = updateLeagueSettingsAction.bind(null, league.id);
+          const updateMflWithId = updateMflConfigAction.bind(null, league.id);
           const deleteWithId = deleteLeagueAction.bind(null, league.id);
 
           return (
@@ -143,6 +144,34 @@ export default async function SettingsPage() {
                   <Button type="submit" size="sm">
                     Save scoring &amp; roster settings
                   </Button>
+                </form>
+
+                <form action={updateMflWithId} className="space-y-3 border-t border-border pt-4">
+                  <div>
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">MyFantasyLeague Sync</p>
+                    <p className="text-xs text-muted-foreground">
+                      Lets Draft Day pull picks from a live MFL draft. Find these in your league&apos;s URL: myfantasyleague.com/2026/home?L=12345 on host www45.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div>
+                      <Label htmlFor={`mflLeagueId-${league.id}`} className="text-xs text-muted-foreground">
+                        MFL League ID
+                      </Label>
+                      <Input id={`mflLeagueId-${league.id}`} name="mflLeagueId" placeholder="37681" defaultValue={league.mflLeagueId ?? ""} className="mt-1 h-8" />
+                    </div>
+                    <div>
+                      <Label htmlFor={`mflHost-${league.id}`} className="text-xs text-muted-foreground">
+                        MFL Host
+                      </Label>
+                      <Input id={`mflHost-${league.id}`} name="mflHost" placeholder="www45" defaultValue={league.mflHost ?? ""} className="mt-1 h-8" />
+                    </div>
+                    <div className="flex items-end">
+                      <Button type="submit" size="sm" variant="outline">
+                        Save MFL sync
+                      </Button>
+                    </div>
+                  </div>
                 </form>
               </CardContent>
             </Card>

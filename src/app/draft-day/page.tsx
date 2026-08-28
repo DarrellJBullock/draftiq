@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { DraftDayBoard, type AvailablePlayer } from "./draft-day-board";
 import { KeeperPanel, type KeeperRow } from "./keeper-panel";
 import { ConferenceSwitcher } from "./conference-switcher";
+import { MflSyncPanel } from "./mfl-sync-panel";
 import { prisma } from "@/lib/db/prisma";
 
 export default async function DraftDayPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -107,6 +108,9 @@ export default async function DraftDayPage({ searchParams }: { searchParams: Pro
         </p>
       ) : (
         <>
+          {league.mflLeagueId && league.mflHost ? (
+            <MflSyncPanel draftId={drafted.id} season={season.year} scoringFormat={league.scoringFormatPreset} />
+          ) : null}
           <KeeperPanel draftId={drafted.id} teamCount={drafted.teamCount} season={season.year} scoringFormat={league.scoringFormatPreset} keepers={keepers} />
           <DraftDayBoard
             draftId={drafted.id}

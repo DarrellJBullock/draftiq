@@ -36,6 +36,10 @@ export async function updateLeagueSettings(leagueId: string, input: Partial<impo
   return prisma.leagueSettings.update({ where: { leagueId }, data: input });
 }
 
+export async function updateLeagueMflConfig(leagueId: string, input: { mflLeagueId: string | null; mflHost: string | null }) {
+  return prisma.league.update({ where: { id: leagueId }, data: input });
+}
+
 export async function deleteLeague(userId: string, leagueId: string) {
   return prisma.league.deleteMany({ where: { id: leagueId, userId } });
 }

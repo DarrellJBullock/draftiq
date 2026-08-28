@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
-import { createLeague, deleteLeague, updateLeague, updateLeagueSettings } from "@/lib/queries/leagues";
-import { createLeagueSchema, leagueSettingsSchema } from "@/lib/validation/league";
+import { createLeague, deleteLeague, updateLeague, updateLeagueMflConfig, updateLeagueSettings } from "@/lib/queries/leagues";
+import { createLeagueSchema, leagueSettingsSchema, mflConfigSchema } from "@/lib/validation/league";
 import type { ScoringFormatPreset } from "@prisma/client";
 
 export async function createLeagueAction(formData: FormData) {
@@ -51,6 +51,16 @@ export async function updateLeagueSettingsAction(leagueId: string, formData: For
     dstSlot: raw.dstSlot === "on",
   });
   await updateLeagueSettings(leagueId, input);
+  revalidatePath("/settings");
+}
+
+export async function updateMflConfigAction(leagueId: string, formData: FormData) {
+  await requireUser();
+  const input = mflConfigSchema.parse({
+    mflLeagueId: String(formData.get("mflLeagueId") ?? ""),
+    mflHost: String(formData.get("mflHost") ?? ""),
+  });
+  await updateLeagueMflConfig(leagueId, input);
   revalidatePath("/settings");
 }
 
