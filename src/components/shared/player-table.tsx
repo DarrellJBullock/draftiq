@@ -1,15 +1,26 @@
 import Link from "next/link";
+import type { Position } from "@prisma/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PositionBadge } from "./position-badge";
 import { RookieBadge } from "./rookie-badge";
 import { InjuryBadge } from "./player-card";
+import { DdaflAdjustmentBadge } from "./ddafl-adjustment-badge";
+import { calculateDdaflAdjustment } from "@/lib/services/scoring/ddafl-adjustment";
 import type { PlayerWithContext } from "@/types";
 
 /**
  * Dense, sortable-looking player table for the /players database view.
  * Server-renderable: no client-side state, just presents the rows it's given.
  */
-export function PlayerTable({ players }: { players: PlayerWithContext[] }) {
+export function PlayerTable({
+  players,
+  showDdaflAdjustment = false,
+  positionAverageYPT = {},
+}: {
+  players: PlayerWithContext[];
+  showDdaflAdjustment?: boolean;
+  positionAverageYPT?: Partial<Record<Position, number | null>>;
+}) {
   return (
     <div className="rounded-lg border border-border">
       <Table>
@@ -25,6 +36,7 @@ export function PlayerTable({ players }: { players: PlayerWithContext[] }) {
             <TableHead className="text-right">Pos Rk</TableHead>
             <TableHead className="text-right">ADP</TableHead>
             <TableHead className="text-right">Proj Pts</TableHead>
+            {showDdaflAdjustment ? <TableHead className="text-right">DDAFL Est.</TableHead> : null}
             <TableHead>Tier</TableHead>
           </TableRow>
         </TableHeader>
@@ -54,6 +66,24 @@ export function PlayerTable({ players }: { players: PlayerWithContext[] }) {
               <TableCell className="text-right tabular-nums">{player.ranking?.positionRank ?? "-"}</TableCell>
               <TableCell className="text-right tabular-nums">{player.adp?.overallADP?.toFixed(1) ?? "-"}</TableCell>
               <TableCell className="text-right tabular-nums">{player.projection?.fantasyPoints?.toFixed(1) ?? "-"}</TableCell>
+              {showDdaflAdjustment ? (
+                <TableCell className="text-right tabular-nums">
+                  <DdaflAdjustmentBadge
+                    adjustment={calculateDdaflAdjustment(
+                      {
+                        position: player.position,
+                        rushAttempts: player.projection?.rushAttempts,
+                        rushingYards: player.projection?.rushingYards,
+                        receptions: player.projection?.receptions,
+                        receivingYards: player.projection?.receivingYards,
+                        attempts: player.projection?.attempts,
+                        passingYards: player.projection?.passingYards,
+                      },
+                      positionAverageYPT[player.position] ?? null
+                    )}
+                  />
+                </TableCell>
+              ) : null}
               <TableCell>
                 {player.playerSeason?.tier ? (
                   <span className="text-xs text-muted-foreground">{player.playerSeason.tier.label}</span>

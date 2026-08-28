@@ -1,11 +1,15 @@
 import Link from "next/link";
+import type { Position } from "@prisma/client";
 import { Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { getActiveSeason } from "@/lib/season";
 import { getCurrentUserOrDemo } from "@/lib/auth";
 import { getOrCreateDefaultLeague } from "@/lib/queries/leagues";
 import { getPlayerPool } from "@/lib/queries/players";
+import { getValuedPlayerPool } from "@/lib/queries/value-pool";
 import { getNFLTeams } from "@/lib/queries/teams";
 import { playerQuerySchema } from "@/lib/validation/player";
+import { computePositionAverageYPT } from "@/lib/services/scoring/ddafl-adjustment";
+import { POSITIONS } from "@/types";
 import { PageHeader } from "@/components/shared/page-header";
 import { PlayerSearch } from "@/components/shared/player-search";
 import { PlayerTable } from "@/components/shared/player-table";
@@ -28,6 +32,22 @@ export default async function PlayersPage({
     scoringFormat: query.scoringFormat ?? league.scoringFormatPreset,
   });
 
+  const showDdaflAdjustment = !!league.mflLeagueId;
+  const positionAverageYPT: Partial<Record<Position, number | null>> = {};
+  if (showDdaflAdjustment) {
+    const pool = await getValuedPlayerPool(season.id, query.scoringFormat ?? league.scoringFormatPreset);
+    const inputs = pool.map((p) => ({
+      position: p.position,
+      rushAttempts: p.projection?.rushAttempts,
+      rushingYards: p.projection?.rushingYards,
+      receptions: p.projection?.receptions,
+      receivingYards: p.projection?.receivingYards,
+      attempts: p.projection?.attempts,
+      passingYards: p.projection?.passingYards,
+    }));
+    for (const pos of POSITIONS) positionAverageYPT[pos] = computePositionAverageYPT(inputs, pos);
+  }
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const buildPageHref = (targetPage: number) => {
     const params = new URLSearchParams(
@@ -46,6 +66,14 @@ export default async function PlayersPage({
 
       <PlayerSearch teams={teams} />
 
+      {showDdaflAdjustment ? (
+        <p className="mb-4 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">DDAFL Est.</span> is an estimated adjustment for your league&apos;s
+          distance-tiered scoring bonuses, based on yards-per-touch efficiency -- not an exact calculation, since real
+          per-play distance data isn&apos;t available from season projections.
+        </p>
+      ) : null}
+
       {players.length === 0 ? (
         <EmptyState
           icon={Users}
@@ -54,7 +82,7 @@ export default async function PlayersPage({
         />
       ) : (
         <>
-          <PlayerTable players={players} />
+          <PlayerTable players={players} showDdaflAdjustment={showDdaflAdjustment} positionAverageYPT={positionAverageYPT} />
 
           <div className="mt-4 flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
