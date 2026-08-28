@@ -1,5 +1,6 @@
 import { PositionBadge } from "./position-badge";
 import { RookieBadge } from "./rookie-badge";
+import { DdaflAdjustmentBadge } from "./ddafl-adjustment-badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { PlayerWithContext } from "@/types";
@@ -9,11 +10,11 @@ export interface TierCardTier {
   tierNumber: number;
   label: string;
   colorHex: string | null;
-  players: PlayerWithContext[];
+  players: (PlayerWithContext & { ddaflAdjustment?: number })[];
 }
 
 /** Renders one draft tier: an accent bar/dot in the tier color, and its ranked player list. */
-export function TierCard({ tier, position }: { tier: TierCardTier; position?: string }) {
+export function TierCard({ tier, position, showDdaflAdjustment = false }: { tier: TierCardTier; position?: string; showDdaflAdjustment?: boolean }) {
   const accent = tier.colorHex ?? "#64748b";
 
   return (
@@ -47,6 +48,11 @@ export function TierCard({ tier, position }: { tier: TierCardTier; position?: st
               </span>
               {player.isRookie ? <RookieBadge /> : null}
               <span className="shrink-0 text-xs text-muted-foreground">{player.nflTeam?.abbreviation ?? "FA"}</span>
+              {showDdaflAdjustment ? (
+                <span className="w-10 shrink-0 text-right text-xs tabular-nums">
+                  <DdaflAdjustmentBadge adjustment={player.ddaflAdjustment ?? 1} />
+                </span>
+              ) : null}
             </div>
           ))
         )}

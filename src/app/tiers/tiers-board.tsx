@@ -14,7 +14,7 @@ export interface TierBoardGroup {
 }
 
 /** Client component: position tabs need local UI state to switch sections without a round trip. */
-export function TiersBoard({ board }: { board: TierBoardGroup[] }) {
+export function TiersBoard({ board, showDdaflAdjustment = false }: { board: TierBoardGroup[]; showDdaflAdjustment?: boolean }) {
   const groupsWithTiers = board.filter((g) => g.tiers.length > 0);
   const [position, setPosition] = useState<Position | undefined>(groupsWithTiers[0]?.position);
 
@@ -39,7 +39,7 @@ export function TiersBoard({ board }: { board: TierBoardGroup[] }) {
 
       <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {active.tiers.map((tier) => (
-          <TierCard key={tier.id} tier={tier} position={active.position} />
+          <TierCard key={tier.id} tier={tier} position={active.position} showDdaflAdjustment={showDdaflAdjustment} />
         ))}
       </div>
     </div>
