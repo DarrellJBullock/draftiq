@@ -4,6 +4,7 @@ import { getActiveSeason } from "@/lib/season";
 import { getCurrentUserOrDemo } from "@/lib/auth";
 import { getOrCreateDefaultLeague } from "@/lib/queries/leagues";
 import { getADPBoard, getBiggestADPMovers } from "@/lib/queries/adp";
+import { calculateDdaflAdjustment, computePositionAverageYPT } from "@/lib/services/scoring/ddafl-adjustment";
 import { PageHeader } from "@/components/shared/page-header";
 import { MetricCard } from "@/components/shared/metric-card";
 import { PositionBadge } from "@/components/shared/position-badge";
@@ -11,6 +12,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { ADPChart } from "@/components/shared/adp-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ADPBoard, type ADPBoardRow } from "./adp-board";
+import { POSITIONS } from "@/types";
 
 export const metadata: Metadata = { title: "ADP" };
 
@@ -26,11 +28,24 @@ export default async function ADPPage() {
     getBiggestADPMovers(season.id, league.scoringFormatPreset, 8),
   ]);
 
-  const rows: ADPBoardRow[] = board.map((p) => {
+  const showDdaflAdjustment = !!league.mflLeagueId;
+  const ddaflInputs = board.map((p) => ({
+    position: p.position,
+    rushAttempts: p.projection?.rushAttempts,
+    rushingYards: p.projection?.rushingYards,
+    receptions: p.projection?.receptions,
+    receivingYards: p.projection?.receivingYards,
+    attempts: p.projection?.attempts,
+    passingYards: p.projection?.passingYards,
+  }));
+  const positionAverageYPTCache = new Map(POSITIONS.map((pos) => [pos, computePositionAverageYPT(ddaflInputs, pos)]));
+
+  const rows: ADPBoardRow[] = board.map((p, i) => {
     const rank = p.expertRanking?.overallRank ?? p.consensusRanking?.overallRank ?? null;
     const diff = p.adp?.overallADP != null && rank != null ? p.adp.overallADP - rank : null;
     const flag = diff == null ? null : diff >= FLAG_THRESHOLD ? "STEAL" : diff <= -FLAG_THRESHOLD ? "REACH" : null;
-    return { ...p, flag };
+    const ddaflAdjustment = calculateDdaflAdjustment(ddaflInputs[i]!, positionAverageYPTCache.get(p.position) ?? null);
+    return { ...p, flag, ddaflAdjustment };
   });
 
   const steals = rows
@@ -185,9 +200,16 @@ export default async function ADPPage() {
       <Card className="mt-4">
         <CardHeader>
           <CardTitle className="text-base">Overall &amp; Position ADP</CardTitle>
+          {showDdaflAdjustment ? (
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">DDAFL Est.</span> is an estimated adjustment for your league&apos;s
+              distance-tiered scoring bonuses, based on yards-per-touch efficiency -- not an exact calculation, since real
+              per-play distance data isn&apos;t available from season projections.
+            </p>
+          ) : null}
         </CardHeader>
         <CardContent>
-          <ADPBoard rows={rows} />
+          <ADPBoard rows={rows} showDdaflAdjustment={showDdaflAdjustment} />
         </CardContent>
       </Card>
     </div>

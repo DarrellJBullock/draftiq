@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PositionBadge } from "@/components/shared/position-badge";
 import { RookieBadge } from "@/components/shared/rookie-badge";
+import { DdaflAdjustmentBadge } from "@/components/shared/ddafl-adjustment-badge";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { POSITIONS } from "@/types";
@@ -15,12 +16,14 @@ import type { getADPBoard } from "@/lib/queries/adp";
 type ADPPlayer = Awaited<ReturnType<typeof getADPBoard>>[number];
 export interface ADPBoardRow extends ADPPlayer {
   flag: "STEAL" | "REACH" | null;
+  /** Estimated multiplier for DDAFL's distance-tiered scoring bonuses -- 1 means no adjustment. */
+  ddaflAdjustment?: number;
 }
 
 const POSITION_TABS = ["ALL", ...POSITIONS] as const;
 
 /** Client component: position tabs filter the already-fetched ADP board without a server round trip. */
-export function ADPBoard({ rows }: { rows: ADPBoardRow[] }) {
+export function ADPBoard({ rows, showDdaflAdjustment = false }: { rows: ADPBoardRow[]; showDdaflAdjustment?: boolean }) {
   const [position, setPosition] = useState<(typeof POSITION_TABS)[number]>("ALL");
 
   const filtered = useMemo(
@@ -55,6 +58,7 @@ export function ADPBoard({ rows }: { rows: ADPBoardRow[] }) {
                   <TableHead className="w-20 text-right">Pos ADP</TableHead>
                   <TableHead className="w-24 text-right">Expert Rk</TableHead>
                   <TableHead className="w-24 text-right">Consensus Rk</TableHead>
+                  {showDdaflAdjustment ? <TableHead className="w-24 text-right">DDAFL Est.</TableHead> : null}
                   <TableHead className="w-24">Flag</TableHead>
                 </TableRow>
               </TableHeader>
@@ -83,6 +87,11 @@ export function ADPBoard({ rows }: { rows: ADPBoardRow[] }) {
                     <TableCell className="text-right tabular-nums text-muted-foreground">
                       {row.consensusRanking?.overallRank ?? "-"}
                     </TableCell>
+                    {showDdaflAdjustment ? (
+                      <TableCell className="text-right tabular-nums">
+                        <DdaflAdjustmentBadge adjustment={row.ddaflAdjustment ?? 1} />
+                      </TableCell>
+                    ) : null}
                     <TableCell>
                       {row.flag === "STEAL" ? (
                         <Badge variant="outline" className="gap-1 border-emerald-500/30 bg-emerald-500/15 text-emerald-400">
