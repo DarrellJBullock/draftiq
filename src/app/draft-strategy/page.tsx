@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { PositionBadge } from "@/components/shared/position-badge";
 import { RookieBadge } from "@/components/shared/rookie-badge";
 import { ValueIndicator } from "@/components/shared/value-indicator";
+import { DdaflAdjustmentBadge } from "@/components/shared/ddafl-adjustment-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,7 @@ export default async function DraftStrategyPage({
     .slice(0, 6);
 
   const totalStarters = settings.qbSlots + settings.rbSlots + settings.wrSlots + settings.teSlots + settings.flexSlots + settings.superflexSlots + (settings.kSlot ? 1 : 0) + (settings.dstSlot ? 1 : 0);
+  const showDdaflAdjustment = !!league.mflLeagueId;
 
   return (
     <div>
@@ -67,6 +69,14 @@ export default async function DraftStrategyPage({
         title="Draft Strategy"
         description={`${league.name} · ${teamCount}-team ${league.scoringFormatPreset.replace("_", " ")} · drafting from pick ${draftPosition}`}
       />
+
+      {showDdaflAdjustment ? (
+        <p className="mb-4 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">DDAFL Est.</span> is an estimated adjustment for your league&apos;s
+          distance-tiered scoring bonuses, based on yards-per-touch efficiency -- not an exact calculation, since real
+          per-play distance data isn&apos;t available from season projections.
+        </p>
+      ) : null}
 
       <form method="get" className="mb-6 flex flex-wrap items-end gap-3 rounded-lg border border-border bg-card/50 p-3">
         <div>
@@ -174,6 +184,11 @@ export default async function DraftStrategyPage({
                   {p.firstName} {p.lastName}
                 </span>
                 {p.isRookie ? <RookieBadge /> : null}
+                {showDdaflAdjustment ? (
+                  <span className="w-10 shrink-0 text-right text-xs tabular-nums">
+                    <DdaflAdjustmentBadge adjustment={p.ddaflAdjustment} />
+                  </span>
+                ) : null}
                 <ValueIndicator score={p.value.overallValue} className="w-28 shrink-0" />
               </div>
             ))}
@@ -188,12 +203,17 @@ export default async function DraftStrategyPage({
             {avoid.length === 0 ? (
               <p className="py-4 text-center text-sm text-muted-foreground">No major risk flags outside this strategy&apos;s priority positions.</p>
             ) : (
-              avoid.map(({ player, bustScore }) => (
+              avoid.map(({ player, bustScore, ddaflAdjustment }) => (
                 <div key={player.id} className="flex items-center gap-2 text-sm">
                   <PositionBadge position={player.position} />
                   <span className="min-w-0 flex-1 truncate">
                     {player.firstName} {player.lastName}
                   </span>
+                  {showDdaflAdjustment ? (
+                    <span className="w-10 shrink-0 text-right text-xs tabular-nums">
+                      <DdaflAdjustmentBadge adjustment={ddaflAdjustment ?? 1} />
+                    </span>
+                  ) : null}
                   <span className="text-xs font-semibold text-rose-400">Bust {bustScore.toFixed(0)}</span>
                 </div>
               ))
@@ -208,12 +228,17 @@ export default async function DraftStrategyPage({
             <CardTitle className="text-base">Sleeper targets</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {sleepers.map(({ player, sleeperScore }) => (
+            {sleepers.map(({ player, sleeperScore, ddaflAdjustment }) => (
               <div key={player.id} className="flex items-center gap-2 text-sm">
                 <PositionBadge position={player.position} />
                 <span className="min-w-0 flex-1 truncate">
                   {player.firstName} {player.lastName}
                 </span>
+                {showDdaflAdjustment ? (
+                  <span className="w-10 shrink-0 text-right text-xs tabular-nums">
+                    <DdaflAdjustmentBadge adjustment={ddaflAdjustment ?? 1} />
+                  </span>
+                ) : null}
                 <span className="text-xs font-semibold text-emerald-400">Sleeper {sleeperScore.toFixed(0)}</span>
               </div>
             ))}
@@ -231,6 +256,11 @@ export default async function DraftStrategyPage({
                 <span className="min-w-0 flex-1 truncate">
                   {p.firstName} {p.lastName}
                 </span>
+                {showDdaflAdjustment ? (
+                  <span className="w-10 shrink-0 text-right text-xs tabular-nums">
+                    <DdaflAdjustmentBadge adjustment={p.ddaflAdjustment} />
+                  </span>
+                ) : null}
                 <ValueIndicator score={p.value.overallValue} className="w-28 shrink-0" />
               </div>
             ))}
