@@ -14,6 +14,8 @@ import { getActiveSeason } from "@/lib/season";
 import { getCurrentUserOrDemo } from "@/lib/auth";
 import { getOrCreateDefaultLeague } from "@/lib/queries/leagues";
 import { getPlayerDetail, getPlayersByIds } from "@/lib/queries/players";
+import { getValuedPlayerPool } from "@/lib/queries/value-pool";
+import { calculateDdaflAdjustment, computePositionAverageYPT } from "@/lib/services/scoring/ddafl-adjustment";
 import { MetricCard } from "@/components/shared/metric-card";
 import { PositionBadge } from "@/components/shared/position-badge";
 import { RookieBadge } from "@/components/shared/rookie-badge";
@@ -63,6 +65,34 @@ export default async function PlayerDetailPage({ params }: { params: Promise<{ i
 
   const player = await getPlayerDetail(id, season.id, league.scoringFormatPreset);
   if (!player) notFound();
+
+  const showDdaflAdjustment = !!league.mflLeagueId;
+  let ddaflAdjustment: number | null = null;
+  if (showDdaflAdjustment) {
+    const pool = await getValuedPlayerPool(season.id, league.scoringFormatPreset);
+    const inputs = pool.map((p) => ({
+      position: p.position,
+      rushAttempts: p.projection?.rushAttempts,
+      rushingYards: p.projection?.rushingYards,
+      receptions: p.projection?.receptions,
+      receivingYards: p.projection?.receivingYards,
+      attempts: p.projection?.attempts,
+      passingYards: p.projection?.passingYards,
+    }));
+    const positionAverageYPT = computePositionAverageYPT(inputs, player.position);
+    ddaflAdjustment = calculateDdaflAdjustment(
+      {
+        position: player.position,
+        rushAttempts: player.projection?.rushAttempts,
+        rushingYards: player.projection?.rushingYards,
+        receptions: player.projection?.receptions,
+        receivingYards: player.projection?.receivingYards,
+        attempts: player.projection?.attempts,
+        passingYards: player.projection?.passingYards,
+      },
+      positionAverageYPT
+    );
+  }
 
   const comparableIds = player.playerSeason?.comparablePlayerIds ?? [];
   const comparablePlayers = comparableIds.length
@@ -129,7 +159,7 @@ export default async function PlayerDetailPage({ params }: { params: Promise<{ i
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className={`grid grid-cols-2 gap-3 ${showDdaflAdjustment ? "sm:grid-cols-5" : "sm:grid-cols-4"}`}>
         <MetricCard label="Overall Rank" value={player.ranking ? `#${player.ranking.overallRank}` : "—"} subtext="Consensus" />
         <MetricCard label="Position Rank" value={player.ranking ? `${player.position}${player.ranking.positionRank}` : "—"} />
         <MetricCard
@@ -138,6 +168,15 @@ export default async function PlayerDetailPage({ params }: { params: Promise<{ i
           subtext={player.adp?.adpDelta ? `${player.adp.adpDelta > 0 ? "+" : ""}${player.adp.adpDelta.toFixed(1)} vs prior` : undefined}
         />
         <MetricCard label="Tier" value={player.playerSeason?.tier?.label ?? "—"} />
+        {showDdaflAdjustment ? (
+          <MetricCard
+            label="DDAFL Est."
+            value={ddaflAdjustment === null || Math.round((ddaflAdjustment - 1) * 100) === 0 ? "—" : `${ddaflAdjustment > 1 ? "+" : ""}${Math.round((ddaflAdjustment - 1) * 100)}%`}
+            subtext="Distance-tiered scoring estimate"
+            icon={ddaflAdjustment && ddaflAdjustment > 1 ? TrendingUp : ddaflAdjustment && ddaflAdjustment < 1 ? TrendingDown : Minus}
+            accent={ddaflAdjustment && ddaflAdjustment > 1 ? "text-emerald-400" : ddaflAdjustment && ddaflAdjustment < 1 ? "text-rose-400" : "text-muted-foreground"}
+          />
+        ) : null}
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
