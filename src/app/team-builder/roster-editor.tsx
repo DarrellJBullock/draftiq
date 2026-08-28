@@ -9,6 +9,7 @@ import { addPlayerAction, removePlayerAction, movePlayerAction } from "./actions
 import { PlayerPicker } from "@/components/shared/player-picker";
 import { PositionBadge } from "@/components/shared/position-badge";
 import { RookieBadge } from "@/components/shared/rookie-badge";
+import { DdaflAdjustmentBadge } from "@/components/shared/ddafl-adjustment-badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -28,12 +29,14 @@ export function StarterSlotRow({
   season,
   scoringFormat,
   rosteredIds,
+  ddaflAdjustment,
 }: {
   slot: StarterSlotDef;
   player: PlayerWithContext | null;
   season: number;
   scoringFormat: ScoringFormatPreset;
   rosteredIds: string[];
+  ddaflAdjustment?: number;
 }) {
   const [pending, startTransition] = useTransition();
 
@@ -48,6 +51,11 @@ export function StarterSlotRow({
           </span>
           {player.isRookie ? <RookieBadge /> : null}
           <span className="shrink-0 text-xs text-muted-foreground">{player.nflTeam?.abbreviation ?? "FA"}</span>
+          {ddaflAdjustment !== undefined ? (
+            <span className="hidden w-10 shrink-0 text-right text-xs tabular-nums sm:inline">
+              <DdaflAdjustmentBadge adjustment={ddaflAdjustment} />
+            </span>
+          ) : null}
           <Button
             variant="ghost"
             size="icon"
@@ -78,9 +86,11 @@ export function StarterSlotRow({
 export function BenchRow({
   row,
   emptyStarterSlots,
+  ddaflAdjustment,
 }: {
   row: RosterRow;
   emptyStarterSlots: StarterSlotDef[];
+  ddaflAdjustment?: number;
 }) {
   const [pending, startTransition] = useTransition();
   const { player } = row;
@@ -94,6 +104,11 @@ export function BenchRow({
       </span>
       {player.isRookie ? <RookieBadge /> : null}
       <span className="shrink-0 text-xs text-muted-foreground">{player.nflTeam?.abbreviation ?? "FA"}</span>
+      {ddaflAdjustment !== undefined ? (
+        <span className="hidden w-10 shrink-0 text-right text-xs tabular-nums sm:inline">
+          <DdaflAdjustmentBadge adjustment={ddaflAdjustment} />
+        </span>
+      ) : null}
       {eligibleSlots.length > 0 ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

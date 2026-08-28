@@ -3,6 +3,7 @@ import { getActiveSeason } from "@/lib/season";
 import { getCurrentUserOrDemo } from "@/lib/auth";
 import { getOrCreateDefaultLeague } from "@/lib/queries/leagues";
 import { getOrCreateManualRoster, getRosterWithPlayers } from "@/lib/queries/roster";
+import { getValuedPlayerPool } from "@/lib/queries/value-pool";
 import { buildStarterSlots, assignToSlots, projectedPoints, computeRosterGrade, computeRosterInsights } from "@/lib/team-builder/analysis";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +31,12 @@ export default async function TeamBuilderPage() {
   const insights = roster ? computeRosterInsights(roster.players, starters) : { strengths: [], weaknesses: [] };
 
   const rosteredIds = roster ? roster.players.map((rp) => rp.player.id) : [];
+  const showDdaflAdjustment = !!league.mflLeagueId;
+  const ddaflByPlayerId = new Map<string, number>();
+  if (showDdaflAdjustment) {
+    const pool = await getValuedPlayerPool(season.id, league.scoringFormatPreset);
+    for (const p of pool) ddaflByPlayerId.set(p.id, p.ddaflAdjustment);
+  }
   const totalProjected = roster
     ? starters.reduce((sum, s) => sum + (s.rosterPlayer ? projectedPoints(s.rosterPlayer.player, settings) : 0), 0)
     : 0;
@@ -126,6 +133,7 @@ export default async function TeamBuilderPage() {
               season={season.year}
               scoringFormat={league.scoringFormatPreset}
               rosteredIds={rosteredIds}
+              ddaflAdjustment={rosterPlayer ? ddaflByPlayerId.get(rosterPlayer.player.id) : undefined}
             />
           ))}
         </div>
@@ -142,7 +150,14 @@ export default async function TeamBuilderPage() {
           <div className="space-y-1">
             {bench.map((rp) => {
               const emptyStarterSlots = starters.filter((s) => !s.rosterPlayer).map((s) => s.slot);
-              return <BenchRow key={rp.id} row={{ slot: rp.slot, player: rp.player }} emptyStarterSlots={emptyStarterSlots} />;
+              return (
+                <BenchRow
+                  key={rp.id}
+                  row={{ slot: rp.slot, player: rp.player }}
+                  emptyStarterSlots={emptyStarterSlots}
+                  ddaflAdjustment={ddaflByPlayerId.get(rp.player.id)}
+                />
+              );
             })}
           </div>
         )}
