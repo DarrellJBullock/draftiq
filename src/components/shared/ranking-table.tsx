@@ -2,6 +2,7 @@ import type { ADP, NFLTeam, Player, Projection } from "@prisma/client";
 import { PositionBadge } from "./position-badge";
 import { RookieBadge } from "./rookie-badge";
 import { InjuryBadge } from "./player-card";
+import { DdaflAdjustmentBadge } from "./ddafl-adjustment-badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "./empty-state";
 import { ListOrdered } from "lucide-react";
@@ -20,17 +21,6 @@ export interface RankingTableRow {
   /** Estimated multiplier for DDAFL's distance-tiered scoring bonuses -- 1 means no adjustment. Omit to hide the column. */
   ddaflAdjustment?: number;
   player: RankingTablePlayer;
-}
-
-function DdaflAdjustmentBadge({ adjustment }: { adjustment: number }) {
-  const pct = Math.round((adjustment - 1) * 100);
-  if (pct === 0) return <span className="text-muted-foreground">-</span>;
-  return (
-    <span className={pct > 0 ? "text-emerald-400" : "text-rose-400"}>
-      {pct > 0 ? "+" : ""}
-      {pct}%
-    </span>
-  );
 }
 
 /** Dense ranking table shared by the Rankings and ADP pages. */

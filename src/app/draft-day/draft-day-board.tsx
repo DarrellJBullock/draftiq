@@ -8,6 +8,7 @@ import type { PlayerWithContext } from "@/types";
 import { PositionBadge } from "@/components/shared/position-badge";
 import { RookieBadge } from "@/components/shared/rookie-badge";
 import { ValueIndicator } from "@/components/shared/value-indicator";
+import { DdaflAdjustmentBadge } from "@/components/shared/ddafl-adjustment-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +22,8 @@ export interface AvailablePlayer extends PlayerWithContext {
   riskAdjustedValue: number;
   upsideScore: number;
   sleeperScore: number;
+  /** Estimated multiplier for DDAFL's distance-tiered scoring bonuses -- 1 means no adjustment. */
+  ddaflAdjustment: number;
 }
 
 type QuickFilter = "BEST_AVAILABLE" | "BEST_VALUE" | "ROOKIE" | "SLEEPER" | "SAFE" | "UPSIDE" | Position;
@@ -58,6 +61,7 @@ export function DraftDayBoard({
   onTheClock,
   players,
   positionNeeds,
+  showDdaflAdjustment = false,
 }: {
   draftId: string;
   season: number;
@@ -68,6 +72,7 @@ export function DraftDayBoard({
   onTheClock: number;
   players: AvailablePlayer[];
   positionNeeds: { position: Position; have: number; need: number }[];
+  showDdaflAdjustment?: boolean;
 }) {
   const router = useRouter();
   const [filter, setFilter] = useState<QuickFilter>("BEST_AVAILABLE");
@@ -200,6 +205,11 @@ export function DraftDayBoard({
                   <span className="hidden w-14 shrink-0 text-right text-xs tabular-nums text-muted-foreground sm:inline">
                     ADP {p.adp?.overallADP?.toFixed(1) ?? "-"}
                   </span>
+                  {showDdaflAdjustment ? (
+                    <span className="hidden w-12 shrink-0 text-right text-xs tabular-nums lg:inline">
+                      <DdaflAdjustmentBadge adjustment={p.ddaflAdjustment} />
+                    </span>
+                  ) : null}
                   <ValueIndicator score={p.overallValue} className="hidden w-24 shrink-0 md:flex" />
                   <Button size="sm" disabled={pending} onClick={() => draftPlayer(p.id)} className="h-7 shrink-0 px-2.5 text-xs">
                     {pending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Draft"}

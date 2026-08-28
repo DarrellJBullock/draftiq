@@ -122,6 +122,7 @@ export default async function DraftDayPage({ searchParams }: { searchParams: Pro
             onTheClock={onTheClock}
             players={available}
             positionNeeds={positionNeeds}
+            showDdaflAdjustment={!!league.mflLeagueId}
           />
         </>
       )}
