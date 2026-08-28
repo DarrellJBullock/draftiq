@@ -2,11 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { ArrowLeftRight, X, Loader2 } from "lucide-react";
-import type { ScoringFormatPreset } from "@prisma/client";
+import type { Position, ScoringFormatPreset } from "@prisma/client";
 import type { PlayerWithContext } from "@/types";
+import { calculateDdaflAdjustment } from "@/lib/services/scoring/ddafl-adjustment";
 import { PlayerPicker } from "@/components/shared/player-picker";
 import { PositionBadge } from "@/components/shared/position-badge";
 import { RookieBadge } from "@/components/shared/rookie-badge";
+import { DdaflAdjustmentBadge } from "@/components/shared/ddafl-adjustment-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +34,8 @@ function TradeSide({
   season,
   scoringFormat,
   excludeIds,
+  showDdaflAdjustment,
+  positionAverageYPT,
 }: {
   label: string;
   players: PlayerWithContext[];
@@ -40,6 +44,8 @@ function TradeSide({
   season: number;
   scoringFormat: ScoringFormatPreset;
   excludeIds: string[];
+  showDdaflAdjustment: boolean;
+  positionAverageYPT: Partial<Record<Position, number | null>>;
 }) {
   return (
     <Card className="border-border/70">
@@ -59,6 +65,24 @@ function TradeSide({
               </span>
               {p.isRookie ? <RookieBadge /> : null}
               <span className="shrink-0 text-xs text-muted-foreground">ADP {p.adp?.overallADP?.toFixed(1) ?? "-"}</span>
+              {showDdaflAdjustment ? (
+                <span className="w-10 shrink-0 text-right text-xs tabular-nums">
+                  <DdaflAdjustmentBadge
+                    adjustment={calculateDdaflAdjustment(
+                      {
+                        position: p.position,
+                        rushAttempts: p.projection?.rushAttempts,
+                        rushingYards: p.projection?.rushingYards,
+                        receptions: p.projection?.receptions,
+                        receivingYards: p.projection?.receivingYards,
+                        attempts: p.projection?.attempts,
+                        passingYards: p.projection?.passingYards,
+                      },
+                      positionAverageYPT[p.position] ?? null
+                    )}
+                  />
+                </span>
+              ) : null}
               <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => onRemove(p.id)}>
                 <X className="h-3 w-3" />
               </Button>
@@ -70,7 +94,19 @@ function TradeSide({
   );
 }
 
-export function TradeWorkbench({ season, scoringFormat, leagueId }: { season: number; scoringFormat: ScoringFormatPreset; leagueId: string }) {
+export function TradeWorkbench({
+  season,
+  scoringFormat,
+  leagueId,
+  showDdaflAdjustment = false,
+  positionAverageYPT = {},
+}: {
+  season: number;
+  scoringFormat: ScoringFormatPreset;
+  leagueId: string;
+  showDdaflAdjustment?: boolean;
+  positionAverageYPT?: Partial<Record<Position, number | null>>;
+}) {
   const [sideA, setSideA] = useState<PlayerWithContext[]>([]);
   const [sideB, setSideB] = useState<PlayerWithContext[]>([]);
   const [loading, setLoading] = useState(false);
@@ -107,8 +143,28 @@ export function TradeWorkbench({ season, scoringFormat, leagueId }: { season: nu
   return (
     <div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <TradeSide label="Side A" players={sideA} onAdd={(p) => setSideA((s) => [...s, p])} onRemove={(id) => setSideA((s) => s.filter((p) => p.id !== id))} season={season} scoringFormat={scoringFormat} excludeIds={excludeIds} />
-        <TradeSide label="Side B" players={sideB} onAdd={(p) => setSideB((s) => [...s, p])} onRemove={(id) => setSideB((s) => s.filter((p) => p.id !== id))} season={season} scoringFormat={scoringFormat} excludeIds={excludeIds} />
+        <TradeSide
+          label="Side A"
+          players={sideA}
+          onAdd={(p) => setSideA((s) => [...s, p])}
+          onRemove={(id) => setSideA((s) => s.filter((p) => p.id !== id))}
+          season={season}
+          scoringFormat={scoringFormat}
+          excludeIds={excludeIds}
+          showDdaflAdjustment={showDdaflAdjustment}
+          positionAverageYPT={positionAverageYPT}
+        />
+        <TradeSide
+          label="Side B"
+          players={sideB}
+          onAdd={(p) => setSideB((s) => [...s, p])}
+          onRemove={(id) => setSideB((s) => s.filter((p) => p.id !== id))}
+          season={season}
+          scoringFormat={scoringFormat}
+          excludeIds={excludeIds}
+          showDdaflAdjustment={showDdaflAdjustment}
+          positionAverageYPT={positionAverageYPT}
+        />
       </div>
 
       <div className="mt-4 flex items-center justify-center">
