@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PositionBadge } from "./position-badge";
 import { ValueIndicator } from "./value-indicator";
+import { DdaflAdjustmentBadge } from "./ddafl-adjustment-badge";
 import { cn } from "@/lib/utils";
 import type { PlayerWithContext } from "@/types";
 
@@ -17,11 +18,14 @@ export function RookieCard({
   highlight,
   footer,
   className,
+  ddaflAdjustment,
 }: {
   player: PlayerWithContext;
   highlight?: { label: string; score: number };
   footer?: React.ReactNode;
   className?: string;
+  /** Estimated multiplier for DDAFL's distance-tiered scoring bonuses -- omit to hide. */
+  ddaflAdjustment?: number;
 }) {
   const rp = player.rookieProfile;
 
@@ -43,6 +47,11 @@ export function RookieCard({
             </Badge>
             {rp?.overallFantasyRank ? <span>Rookie #{rp.overallFantasyRank}</span> : null}
             {player.adp?.overallADP ? <span>&middot; ADP {player.adp.overallADP.toFixed(1)}</span> : null}
+            {ddaflAdjustment !== undefined ? (
+              <span>
+                &middot; DDAFL <DdaflAdjustmentBadge adjustment={ddaflAdjustment} />
+              </span>
+            ) : null}
           </div>
 
           <div className="mt-3 space-y-1.5">
