@@ -27,6 +27,7 @@ export async function getBusts(seasonId: string, scoringFormat: ScoringFormatPre
     .filter((p) => SKILL_POSITIONS.includes(p.position) && p.adp?.overallADP && p.ranking?.overallRank)
     .map((p) => ({
       player: p,
+      ddaflAdjustment: p.ddaflAdjustment,
       ...computeBustScore({
         adp: p.adp!.overallADP,
         overallRank: p.ranking!.overallRank,

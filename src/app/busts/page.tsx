@@ -12,6 +12,7 @@ export default async function BustsPage() {
   const league = await getOrCreateDefaultLeague(user.id);
 
   const busts = await getBusts(season.id, league.scoringFormatPreset, 30);
+  const showDdaflAdjustment = !!league.mflLeagueId;
 
   return (
     <div>
@@ -20,12 +21,20 @@ export default async function BustsPage() {
         description={`${season.label} · ${league.scoringFormatPreset.replace("_", " ")} · players being drafted ahead of their underlying ranking and risk profile`}
       />
 
+      {showDdaflAdjustment ? (
+        <p className="mb-4 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">DDAFL Est.</span> is an estimated adjustment for your league&apos;s
+          distance-tiered scoring bonuses, based on yards-per-touch efficiency -- not an exact calculation, since real
+          per-play distance data isn&apos;t available from season projections.
+        </p>
+      ) : null}
+
       {busts.length === 0 ? (
         <EmptyState icon={ShieldAlert} title="No bust risks flagged yet" description="Risk flags appear once ADP, ranking, and risk data are loaded for this season." />
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {busts.map((b) => (
-            <BustCard key={b.player.id} bust={b} />
+            <BustCard key={b.player.id} bust={b} showDdaflAdjustment={showDdaflAdjustment} />
           ))}
         </div>
       )}

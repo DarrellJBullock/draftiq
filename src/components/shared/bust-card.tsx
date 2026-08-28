@@ -2,6 +2,7 @@ import { ShieldAlert } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PositionBadge } from "./position-badge";
 import { RookieBadge } from "./rookie-badge";
+import { DdaflAdjustmentBadge } from "./ddafl-adjustment-badge";
 import type { PlayerWithContext } from "@/types";
 
 export interface BustCardData {
@@ -10,6 +11,8 @@ export interface BustCardData {
   riskFactors: string[];
   suggestedDraftRangeStart: number;
   suggestedDraftRangeEnd: number;
+  /** Estimated multiplier for DDAFL's distance-tiered scoring bonuses -- 1 means no adjustment. */
+  ddaflAdjustment?: number;
 }
 
 function toneFor(score: number) {
@@ -19,7 +22,7 @@ function toneFor(score: number) {
 }
 
 /** Card summarizing why a player is priced above their underlying ranking/risk profile. */
-export function BustCard({ bust }: { bust: BustCardData }) {
+export function BustCard({ bust, showDdaflAdjustment = false }: { bust: BustCardData; showDdaflAdjustment?: boolean }) {
   const { player } = bust;
 
   return (
@@ -48,7 +51,7 @@ export function BustCard({ bust }: { bust: BustCardData }) {
           <span className="text-xs text-muted-foreground">Bust score</span>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className={`grid gap-2 text-xs ${showDdaflAdjustment ? "grid-cols-3" : "grid-cols-2"}`}>
           <div className="rounded-md bg-muted/50 px-2 py-1.5">
             <p className="text-muted-foreground">ADP</p>
             <p className="font-semibold tabular-nums">{player.adp?.overallADP?.toFixed(1) ?? "-"}</p>
@@ -57,6 +60,14 @@ export function BustCard({ bust }: { bust: BustCardData }) {
             <p className="text-muted-foreground">Rank</p>
             <p className="font-semibold tabular-nums">#{player.ranking?.overallRank ?? "-"}</p>
           </div>
+          {showDdaflAdjustment ? (
+            <div className="rounded-md bg-muted/50 px-2 py-1.5">
+              <p className="text-muted-foreground">DDAFL Est.</p>
+              <p className="font-semibold tabular-nums">
+                <DdaflAdjustmentBadge adjustment={bust.ddaflAdjustment ?? 1} />
+              </p>
+            </div>
+          ) : null}
         </div>
 
         {bust.riskFactors.length > 0 ? (
