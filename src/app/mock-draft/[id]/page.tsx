@@ -2,10 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, TrendingDown, TrendingUp } from "lucide-react";
 import { getMockDraftResult } from "@/lib/queries/drafts";
+import { getCurrentUserOrDemo } from "@/lib/auth";
+import { getOrCreateDefaultLeague } from "@/lib/queries/leagues";
+import { getValuedPlayerPool } from "@/lib/queries/value-pool";
 import { PageHeader } from "@/components/shared/page-header";
 import { MetricCard } from "@/components/shared/metric-card";
 import { PositionBadge } from "@/components/shared/position-badge";
 import { RookieBadge } from "@/components/shared/rookie-badge";
+import { DdaflAdjustmentBadge } from "@/components/shared/ddafl-adjustment-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,12 +20,20 @@ import type { PickNote } from "@/lib/services/draft-engine";
 
 export default async function MockDraftResultPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const mockDraft = await getMockDraftResult(id);
+  const [mockDraft, user] = await Promise.all([getMockDraftResult(id), getCurrentUserOrDemo()]);
   if (!mockDraft) notFound();
+  const league = await getOrCreateDefaultLeague(user.id);
 
   const positionalGrades = mockDraft.positionalGrades as unknown as Partial<Record<Position, string>>;
   const bestPicks = mockDraft.bestPicks as unknown as PickNote[];
   const worstPicks = mockDraft.worstPicks as unknown as PickNote[];
+
+  const showDdaflAdjustment = !!league.mflLeagueId;
+  const ddaflByPlayerId = new Map<string, number>();
+  if (showDdaflAdjustment) {
+    const pool = await getValuedPlayerPool(mockDraft.draft.seasonId, mockDraft.scoringFormat);
+    for (const p of pool) ddaflByPlayerId.set(p.id, p.ddaflAdjustment);
+  }
 
   return (
     <div>
@@ -139,6 +151,13 @@ export default async function MockDraftResultPage({ params }: { params: Promise<
 
       <div className="mt-6">
         <h2 className="mb-3 text-lg font-semibold tracking-tight">Full draft board</h2>
+        {showDdaflAdjustment ? (
+          <p className="mb-2 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">DDAFL Est.</span> is an estimated adjustment for your league&apos;s
+            distance-tiered scoring bonuses, based on yards-per-touch efficiency -- not an exact calculation, since real
+            per-play distance data isn&apos;t available from season projections.
+          </p>
+        ) : null}
         <div className="rounded-lg border border-border">
           <Table>
             <TableHeader>
@@ -149,6 +168,7 @@ export default async function MockDraftResultPage({ params }: { params: Promise<
                 <TableHead className="w-16">Pos</TableHead>
                 <TableHead className="text-right">ADP</TableHead>
                 <TableHead className="text-right">Reach</TableHead>
+                {showDdaflAdjustment ? <TableHead className="text-right">DDAFL Est.</TableHead> : null}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -179,6 +199,11 @@ export default async function MockDraftResultPage({ params }: { params: Promise<
                   <TableCell className={cn("text-right tabular-nums", pick.reachAmount && pick.reachAmount > 5 ? "text-rose-400" : "text-muted-foreground")}>
                     {pick.isKeeper ? "-" : pick.reachAmount ? `+${pick.reachAmount.toFixed(1)}` : "-"}
                   </TableCell>
+                  {showDdaflAdjustment ? (
+                    <TableCell className="text-right tabular-nums">
+                      {pick.player ? <DdaflAdjustmentBadge adjustment={ddaflByPlayerId.get(pick.player.id) ?? 1} /> : "-"}
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               ))}
             </TableBody>
