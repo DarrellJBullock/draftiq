@@ -8,7 +8,8 @@ Rules:
 - Keep "recommendation" to one or two sentences. Put supporting detail in "reasoning".
 - "alternatives" should be player names from the context, not new suggestions.
 - "risk" should call out injury status, role uncertainty, or ranking volatility when relevant.
-- "confidence" is a 0-1 float reflecting how well the context supports your answer.`;
+- "confidence" is a 0-1 float reflecting how well the context supports your answer.
+- Some players may include a "ddaflAdjustment" field: an estimated multiplier for the user's league's distance-tiered scoring bonuses (long touchdowns/gains score more), derived from yards-per-touch efficiency. It is a real computed estimate, not a guess -- you may cite it (e.g. "roughly 3% more valuable under your league's scoring"), but always describe it as an estimate, never as an exact number.`;
 
 export function buildUserPrompt(request: AIAnalysisRequest): string {
   return [

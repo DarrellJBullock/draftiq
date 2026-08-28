@@ -10,6 +10,8 @@ export interface AIPlayerContext {
   tier: number | null;
   isRookie: boolean;
   injuryStatus: string;
+  /** Estimated multiplier for the league's DDAFL distance-tiered scoring bonuses -- only present when that league has MFL sync configured. */
+  ddaflAdjustment?: number;
 }
 
 export interface AIRequestContext {

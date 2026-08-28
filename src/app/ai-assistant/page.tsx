@@ -11,7 +11,7 @@ export default async function AIAssistantPage() {
   return (
     <div>
       <PageHeader title="AI Assistant" description={`${season.label} · ${league.scoringFormatPreset.replace("_", " ")} · ask draft questions grounded in this app's data`} />
-      <AIChat season={season.year} scoringFormat={league.scoringFormatPreset} />
+      <AIChat season={season.year} scoringFormat={league.scoringFormatPreset} showDdaflAdjustment={!!league.mflLeagueId} />
     </div>
   );
 }

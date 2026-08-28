@@ -6,7 +6,11 @@ function findMentionedPlayers(question: string, players: AIPlayerContext[]): AIP
 }
 
 function fmt(p: AIPlayerContext): string {
-  return `${p.name} (${p.position}${p.team ? `, ${p.team}` : ""}) -- Rank #${p.overallRank} overall / #${p.positionRank} at position, ADP ${p.adp.toFixed(1)}, projected ${p.projectedPoints.toFixed(1)} pts`;
+  const ddafl =
+    p.ddaflAdjustment !== undefined && Math.round((p.ddaflAdjustment - 1) * 100) !== 0
+      ? `, DDAFL est. ${p.ddaflAdjustment > 1 ? "+" : ""}${Math.round((p.ddaflAdjustment - 1) * 100)}%`
+      : "";
+  return `${p.name} (${p.position}${p.team ? `, ${p.team}` : ""}) -- Rank #${p.overallRank} overall / #${p.positionRank} at position, ADP ${p.adp.toFixed(1)}, projected ${p.projectedPoints.toFixed(1)} pts${ddafl}`;
 }
 
 /**

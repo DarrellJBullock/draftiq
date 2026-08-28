@@ -6,7 +6,7 @@ export async function buildAIContext(
   seasonId: string,
   seasonYear: number,
   scoringFormat: ScoringFormatPreset,
-  options: { question?: string; limit?: number } = {}
+  options: { question?: string; limit?: number; showDdaflAdjustment?: boolean } = {}
 ): Promise<AIRequestContext> {
   const pool = await getValuedPlayerPool(seasonId, scoringFormat);
   const sorted = [...pool].sort((a, b) => (a.ranking?.overallRank ?? 999) - (b.ranking?.overallRank ?? 999));
@@ -30,6 +30,7 @@ export async function buildAIContext(
     tier: p.playerSeason?.tier?.tierNumber ?? null,
     isRookie: p.isRookie,
     injuryStatus: p.injuryStatus,
+    ...(options.showDdaflAdjustment ? { ddaflAdjustment: p.ddaflAdjustment } : {}),
   }));
 
   return { season: seasonYear, scoringFormat, players };

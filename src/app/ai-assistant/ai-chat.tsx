@@ -31,7 +31,7 @@ const SUGGESTED_PROMPTS = [
   "Which rookies have the best landing spots?",
 ];
 
-export function AIChat({ season, scoringFormat }: { season: number; scoringFormat: ScoringFormatPreset }) {
+export function AIChat({ season, scoringFormat, showDdaflAdjustment = false }: { season: number; scoringFormat: ScoringFormatPreset; showDdaflAdjustment?: boolean }) {
   const [question, setQuestion] = useState("");
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [loading, setLoading] = useState(false);
@@ -140,6 +140,7 @@ export function AIChat({ season, scoringFormat }: { season: number; scoringForma
       </div>
       <p className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
         <Sparkles className="h-3 w-3" /> Grounded in this app&apos;s player, ranking, projection, and ADP data -- never invents stats.
+        {showDdaflAdjustment ? " Also factors in your league's estimated DDAFL scoring adjustment where relevant." : ""}
       </p>
     </div>
   );
