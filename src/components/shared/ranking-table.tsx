@@ -17,17 +17,32 @@ export interface RankingTableRow {
   id: string;
   overallRank: number;
   positionRank: number;
+  /** Estimated multiplier for DDAFL's distance-tiered scoring bonuses -- 1 means no adjustment. Omit to hide the column. */
+  ddaflAdjustment?: number;
   player: RankingTablePlayer;
+}
+
+function DdaflAdjustmentBadge({ adjustment }: { adjustment: number }) {
+  const pct = Math.round((adjustment - 1) * 100);
+  if (pct === 0) return <span className="text-muted-foreground">-</span>;
+  return (
+    <span className={pct > 0 ? "text-emerald-400" : "text-rose-400"}>
+      {pct > 0 ? "+" : ""}
+      {pct}%
+    </span>
+  );
 }
 
 /** Dense ranking table shared by the Rankings and ADP pages. */
 export function RankingTable({
   rows,
   showPosition = true,
+  showDdaflAdjustment = false,
   emptyLabel = "No rankings found",
 }: {
   rows: RankingTableRow[];
   showPosition?: boolean;
+  showDdaflAdjustment?: boolean;
   emptyLabel?: string;
 }) {
   if (rows.length === 0) {
@@ -46,6 +61,7 @@ export function RankingTable({
             <TableHead className="w-16">Team</TableHead>
             <TableHead className="w-20 text-right">ADP</TableHead>
             <TableHead className="w-20 text-right">Proj Pts</TableHead>
+            {showDdaflAdjustment ? <TableHead className="w-24 text-right">DDAFL Est.</TableHead> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -74,6 +90,11 @@ export function RankingTable({
               <TableCell className="text-right tabular-nums text-muted-foreground">
                 {row.player.projection?.fantasyPoints?.toFixed(1) ?? "-"}
               </TableCell>
+              {showDdaflAdjustment ? (
+                <TableCell className="text-right tabular-nums">
+                  <DdaflAdjustmentBadge adjustment={row.ddaflAdjustment ?? 1} />
+                </TableCell>
+              ) : null}
             </TableRow>
           ))}
         </TableBody>

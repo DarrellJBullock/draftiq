@@ -1,5 +1,6 @@
 import type { Position, RankingSource, ScoringFormatPreset } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
+import { calculateDdaflAdjustment, computePositionAverageYPT } from "@/lib/services/scoring/ddafl-adjustment";
 
 /**
  * Full ranking board for a single source (CONSENSUS or EXPERT), with just
@@ -33,12 +34,27 @@ export async function getRankingsBoard(
     orderBy: { overallRank: "asc" },
   });
 
-  return rankings.map((r) => {
+  const ddaflInputs = rankings.map((r) => ({
+    position: r.player.position,
+    rushAttempts: r.player.projections[0]?.rushAttempts,
+    rushingYards: r.player.projections[0]?.rushingYards,
+    receptions: r.player.projections[0]?.receptions,
+    receivingYards: r.player.projections[0]?.receivingYards,
+    attempts: r.player.projections[0]?.attempts,
+    passingYards: r.player.projections[0]?.passingYards,
+  }));
+  const positionAverageYPTCache = new Map<Position, number | null>();
+  for (const pos of new Set(ddaflInputs.map((i) => i.position))) {
+    positionAverageYPTCache.set(pos, computePositionAverageYPT(ddaflInputs, pos));
+  }
+
+  return rankings.map((r, i) => {
     const { adps, projections, ...player } = r.player;
     return {
       id: r.id,
       overallRank: r.overallRank,
       positionRank: r.positionRank,
+      ddaflAdjustment: calculateDdaflAdjustment(ddaflInputs[i]!, positionAverageYPTCache.get(r.player.position) ?? null),
       player: {
         ...player,
         adp: adps[0] ?? null,

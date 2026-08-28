@@ -2,11 +2,14 @@ import type { Position, ScoringFormatPreset } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { calculateValue, computePositionPoolStats, type ValueResult } from "@/lib/services/value-engine";
 import { deriveRiskLevel } from "@/lib/services/risk";
+import { calculateDdaflAdjustment, computePositionAverageYPT } from "@/lib/services/scoring/ddafl-adjustment";
 import { PLAYER_INCLUDE_FOR, shapePlayer } from "./shape";
 import type { PlayerWithContext } from "@/types";
 
 export interface ValuedPlayer extends PlayerWithContext {
   value: ValueResult;
+  /** Estimated multiplier for DDAFL's distance-tiered scoring bonuses (see ddafl-adjustment.ts) -- 1 means no adjustment. */
+  ddaflAdjustment: number;
 }
 
 const DEFAULT_STARTER_COUNTS: Record<Position, number> = { QB: 12, RB: 30, WR: 30, TE: 12, K: 12, DST: 12 };
@@ -39,6 +42,7 @@ export async function getValuedPlayerPool(
 
   const positionStatsCache = new Map<Position, ReturnType<typeof computePositionPoolStats>>();
   const tierDropoffCache = new Map<string, number>();
+  const positionAverageYPTCache = new Map<Position, number | null>();
 
   for (const [position, group] of byPosition) {
     const sorted = [...group].sort((a, b) => (b.projection?.fantasyPoints ?? 0) - (a.projection?.fantasyPoints ?? 0));
@@ -51,6 +55,22 @@ export async function getValuedPlayerPool(
       const dropoff = Math.max(0, points[idx]! - points[gapTo]!);
       tierDropoffCache.set(p.id, dropoff);
     });
+
+    positionAverageYPTCache.set(
+      position,
+      computePositionAverageYPT(
+        group.map((p) => ({
+          position: p.position,
+          rushAttempts: p.projection?.rushAttempts,
+          rushingYards: p.projection?.rushingYards,
+          receptions: p.projection?.receptions,
+          receivingYards: p.projection?.receivingYards,
+          attempts: p.projection?.attempts,
+          passingYards: p.projection?.passingYards,
+        })),
+        position
+      )
+    );
   }
 
   return players.map((p) => {
@@ -72,6 +92,19 @@ export async function getValuedPlayerPool(
       positionStats,
     });
 
-    return { ...p, value };
+    const ddaflAdjustment = calculateDdaflAdjustment(
+      {
+        position: p.position,
+        rushAttempts: p.projection?.rushAttempts,
+        rushingYards: p.projection?.rushingYards,
+        receptions: p.projection?.receptions,
+        receivingYards: p.projection?.receivingYards,
+        attempts: p.projection?.attempts,
+        passingYards: p.projection?.passingYards,
+      },
+      positionAverageYPTCache.get(p.position) ?? null
+    );
+
+    return { ...p, value, ddaflAdjustment };
   });
 }

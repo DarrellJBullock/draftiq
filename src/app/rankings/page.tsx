@@ -23,7 +23,14 @@ export default async function RankingsPage() {
         title="Rankings"
         description={`${season.label} · ${league.scoringFormatPreset.replace("_", " ")} · consensus and expert overall rankings`}
       />
-      <RankingsExplorer consensus={consensus} expert={expert} />
+      {league.mflLeagueId ? (
+        <p className="mb-4 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">DDAFL Est.</span> is an estimated adjustment for your league&apos;s
+          distance-tiered scoring bonuses, based on yards-per-touch efficiency -- not an exact calculation, since real
+          per-play distance data isn&apos;t available from season projections.
+        </p>
+      ) : null}
+      <RankingsExplorer consensus={consensus} expert={expert} showDdaflAdjustment={!!league.mflLeagueId} />
     </div>
   );
 }

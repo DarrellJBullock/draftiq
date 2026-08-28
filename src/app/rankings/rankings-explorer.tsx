@@ -21,9 +21,11 @@ const POSITION_TABS = ["ALL", ...POSITIONS] as const;
 export function RankingsExplorer({
   consensus,
   expert,
+  showDdaflAdjustment = false,
 }: {
   consensus: RankingTableRow[];
   expert: RankingTableRow[];
+  showDdaflAdjustment?: boolean;
 }) {
   const [source, setSource] = useState<RankingSource>("CONSENSUS");
   const [position, setPosition] = useState<(typeof POSITION_TABS)[number]>("ALL");
@@ -86,7 +88,7 @@ export function RankingsExplorer({
         {position !== "ALL" ? ` · ${POSITION_LABELS[position]}` : ""} · {source === "CONSENSUS" ? "Consensus" : "Expert"} ranking
       </p>
 
-      <RankingTable rows={filtered} showPosition={position === "ALL"} emptyLabel="No players match your search" />
+      <RankingTable rows={filtered} showPosition={position === "ALL"} showDdaflAdjustment={showDdaflAdjustment} emptyLabel="No players match your search" />
     </div>
   );
 }
