@@ -18,7 +18,7 @@
 import { PrismaClient, type Position } from "@prisma/client";
 import { mulberry32 } from "../prisma/seed/rng";
 import { generateStatLine, fantasyPointsFor, floorCeiling } from "../prisma/seed/statlines";
-import { deriveSeedData, SEED_FORMATS } from "../prisma/seed/derive";
+import { deriveSeedData, SEED_FORMATS, tierLabel } from "../prisma/seed/derive";
 import { parseImportFile } from "../src/lib/services/import/parser";
 import { validateImportRows } from "../src/lib/services/import/validator";
 import { importRows } from "../src/lib/services/import/importer";
@@ -82,6 +82,42 @@ async function main() {
 
   const derived = deriveSeedData(rand, derivedInputs);
   const playerById = new Map(players.map((p) => [p.id, p]));
+
+  // Tiers aren't part of the CSV import pipeline (they're seasonwide buckets,
+  // not per-player rows), so upsert them directly and assign each player's
+  // PlayerSeason.tierId, mirroring prisma/seed.ts's tier step -- this was
+  // previously computed by deriveSeedData() but never wired up here, which is
+  // why every provider-sourced player was missing a tier.
+  const season = await prisma.season.findUnique({ where: { year: SEASON_YEAR } });
+  if (!season) throw new Error(`Season ${SEASON_YEAR} does not exist -- create it first.`);
+
+  const tierIdByKey = new Map<string, string>();
+  for (const k of derived.tierKeys) {
+    const row = await prisma.tier.upsert({
+      where: { seasonId_position_scoringFormat_tierNumber: { seasonId: season.id, position: k.position, scoringFormat: k.scoringFormat, tierNumber: k.tierNumber } },
+      update: {},
+      create: {
+        seasonId: season.id,
+        position: k.position,
+        scoringFormat: k.scoringFormat,
+        tierNumber: k.tierNumber,
+        label: `${k.position} Tier ${k.tierNumber} - ${tierLabel(k.tierNumber)}`,
+      },
+    });
+    tierIdByKey.set(`${row.position}|${row.scoringFormat}|${row.tierNumber}`, row.id);
+  }
+
+  // Update PlayerSeason.tierId using the PPR-format tier as the default display tier.
+  const pprAssignmentByPlayer = new Map<string, string>();
+  for (const a of derived.tierAssignments) {
+    if (a.scoringFormat !== "PPR") continue;
+    const tierId = tierIdByKey.get(`${a.tierKey.position}|${a.tierKey.scoringFormat}|${a.tierKey.tierNumber}`);
+    if (tierId) pprAssignmentByPlayer.set(a.playerId, tierId);
+  }
+  for (const [playerId, tierId] of pprAssignmentByPlayer) {
+    await prisma.playerSeason.updateMany({ where: { playerId, seasonId: season.id }, data: { tierId } });
+  }
+  console.log(`Upserted ${tierIdByKey.size} tiers and assigned tiers to ${pprAssignmentByPlayer.size} players.`);
 
   const csvEscape = (v: string) => (v.includes(",") || v.includes('"') ? `"${v.replace(/"/g, '""')}"` : v);
 
